@@ -10,7 +10,7 @@
       <nav class="nav-menu">
         <a class="active">首页</a>
         <a>商品市场</a>
-        <a>AI助手</a>
+        <a href="#/ai">AI助手</a>
         <a>个人中心</a>
       </nav>
     </header>
@@ -34,7 +34,7 @@
 
           <div class="hero-buttons">
             <button class="primary-btn">🛍️ 开始逛逛</button>
-            <button class="secondary-btn">🤖 AI 智能助手</button>
+            <a class="secondary-btn" href="#/ai">🤖 AI 智能助手</a>
           </div>
         </div>
 
@@ -70,7 +70,7 @@
             <div class="feature-icon">🤖</div>
             <h3>AI 智能助手</h3>
             <p>告诉 AI 你的需求，快速寻找商品</p>
-            <button>开始咨询 →</button>
+            <a href="#/ai">开始咨询 →</a>
           </div>
 
           <div class="feature-card">
@@ -230,6 +230,8 @@
   border: none;
   cursor: pointer;
   font-size: 15px;
+  text-decoration: none;
+  display: inline-block;
 }
 
 .primary-btn {
@@ -327,13 +329,15 @@
   min-height: 50px;
 }
 
-.feature-card button {
+.feature-card button,
+.feature-card a {
   border: none;
   background: none;
   color: #6c5ce7;
   cursor: pointer;
   padding: 0;
   font-weight: 600;
+  text-decoration: none;
 }
 
 /* 商品 */
