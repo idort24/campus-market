@@ -98,11 +98,24 @@ const filteredProducts = computed(() => {
       </div>
 
       <nav class="nav-menu">
-        <a>首页</a>
-        <a class="active">商品市场</a>
-        <a>AI助手</a>
-        <a>个人中心</a>
-      </nav>
+
+  <router-link to="/">
+    首页
+  </router-link>
+
+  <router-link to="/product">
+    商品市场
+  </router-link>
+
+  <router-link to="/ai">
+    AI助手
+  </router-link>
+
+  <router-link to="/profile">
+    个人中心
+  </router-link>
+
+</nav>
     </header>
 
     <!-- 页面主体 -->
