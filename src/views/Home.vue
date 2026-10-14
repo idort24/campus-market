@@ -29,6 +29,22 @@
           商品市场
         </router-link>
 
+        <!-- 发布商品 -->
+        <router-link
+          to="/publish"
+          active-class="active"
+        >
+          发布商品
+        </router-link>
+
+        <!-- 分类管理 -->
+        <router-link
+          to="/categories"
+          active-class="active"
+        >
+          分类管理
+        </router-link>
+
         <!-- AI助手 -->
         <router-link
           to="/ai"
@@ -210,13 +226,12 @@
               发布你的闲置物品
             </p>
 
-            <!-- 目前没有发布商品页面，所以先不跳转 -->
-            <button
+            <router-link
+              to="/publish"
               class="feature-button"
-              @click="goProduct"
             >
               发布商品 →
-            </button>
+            </router-link>
 
           </div>
 

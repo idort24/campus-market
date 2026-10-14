@@ -16,6 +16,14 @@
           商品市场
         </router-link>
 
+        <router-link to="/publish">
+          发布商品
+        </router-link>
+
+        <router-link to="/categories">
+          分类管理
+        </router-link>
+
         <router-link to="/ai">
           AI助手
         </router-link>

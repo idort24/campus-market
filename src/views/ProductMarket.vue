@@ -1,87 +1,22 @@
 <script setup>
 import { ref, computed } from 'vue'
+import { productList } from '../data/products.js'
 
 const searchText = ref('')
 const activeCategory = ref('全部')
 
 const categories = ['全部', '数码产品', '教材书籍', '生活用品', '运动用品']
 
-const products = [
-  {
-    id: 1,
-    name: '高等数学教材',
-    price: 20,
-    category: '教材书籍',
-    icon: '📚',
-    description: '九成新，适合大一数学学习'
-  },
-  {
-    id: 2,
-    name: '蓝牙耳机',
-    price: 50,
-    category: '数码产品',
-    icon: '🎧',
-    description: '音质清晰，使用状态良好'
-  },
-  {
-    id: 3,
-    name: '宿舍椅子',
-    price: 30,
-    category: '生活用品',
-    icon: '🪑',
-    description: '宿舍闲置椅子，结实耐用'
-  },
-  {
-    id: 4,
-    name: '机械键盘',
-    price: 80,
-    category: '数码产品',
-    icon: '⌨️',
-    description: '手感舒适，适合学习和办公'
-  },
-  {
-    id: 5,
-    name: '英语四级词汇书',
-    price: 15,
-    category: '教材书籍',
-    icon: '📖',
-    description: '备考四级必备，几乎全新'
-  },
-  {
-    id: 6,
-    name: '宿舍台灯',
-    price: 25,
-    category: '生活用品',
-    icon: '💡',
-    description: '三档亮度，晚上学习很方便'
-  },
-  {
-    id: 7,
-    name: '篮球',
-    price: 45,
-    category: '运动用品',
-    icon: '🏀',
-    description: '使用次数较少，适合校园运动'
-  },
-  {
-    id: 8,
-    name: '运动水杯',
-    price: 18,
-    category: '运动用品',
-    icon: '🥤',
-    description: '大容量水杯，方便携带'
-  }
-]
-
 const filteredProducts = computed(() => {
-  return products.filter((product) => {
+  return productList.value.filter((product) => {
     const matchCategory =
       activeCategory.value === '全部' ||
       product.category === activeCategory.value
 
+    const keyword = searchText.value.trim().toLowerCase()
     const matchSearch =
-      product.name.includes(searchText.value) ||
-      product.description.includes(searchText.value)
+      product.name.toLowerCase().includes(keyword) ||
+      product.description.toLowerCase().includes(keyword)
 
     return matchCategory && matchSearch
   })
@@ -105,6 +40,14 @@ const filteredProducts = computed(() => {
 
   <router-link to="/product">
     商品市场
+  </router-link>
+
+  <router-link to="/publish">
+    发布商品
+  </router-link>
+
+  <router-link to="/categories">
+    分类管理
   </router-link>
 
   <router-link to="/ai">
