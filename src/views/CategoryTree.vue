@@ -68,6 +68,7 @@ onMounted(loadData)
         <router-link to="/publish">发布商品</router-link>
         <router-link to="/categories" active-class="active">分类管理</router-link>
         <router-link to="/ai">AI助手</router-link>
+        <router-link to="/file-transfer">文件传输</router-link>
         <router-link to="/profile">个人中心</router-link>
       </nav>
     </header>

@@ -85,6 +85,7 @@ function onCancel() {
         <router-link to="/publish" active-class="active">发布商品</router-link>
         <router-link to="/categories">分类管理</router-link>
         <router-link to="/ai">AI助手</router-link>
+        <router-link to="/file-transfer">文件传输</router-link>
         <router-link to="/profile">个人中心</router-link>
       </nav>
     </header>
