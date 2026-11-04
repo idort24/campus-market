@@ -53,6 +53,14 @@
           AI助手
         </router-link>
 
+        <!-- 文件传输 -->
+        <router-link
+          to="/file-transfer"
+          active-class="active"
+        >
+          文件传输
+        </router-link>
+
         <!-- 个人中心 -->
         <router-link
           to="/profile"

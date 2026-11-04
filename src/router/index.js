@@ -10,6 +10,7 @@ import PublishProduct from '../views/PublishProduct.vue'
 import CategoryTree from '../views/CategoryTree.vue'
 import Login from '../views/Login.vue'
 import AdminPermission from '../views/AdminPermission.vue'
+import FileTransfer from '../views/FileTransfer.vue'
 
 // 管理员后台
 import AdminLayout from '../views/admin/AdminLayout.vue'
@@ -37,6 +38,7 @@ const router = createRouter({
     { path: '/publish', name: 'Publish', component: PublishProduct },
     { path: '/categories', name: 'Categories', component: CategoryTree },
     { path: '/ai', name: 'AI', component: AiAssistant },
+    { path: '/file-transfer', name: 'FileTransfer', component: FileTransfer },
     { path: '/profile', name: 'Profile', component: Profile },
 
     // 用户端补充
@@ -77,13 +79,11 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
   const userInfo = getUserInfo()
 
-  // 需要登录但没登录
   if (to.meta.requiresAuth && !token) {
     next({ path: '/login', query: { redirect: to.fullPath } })
     return
   }
 
-  // 需要管理员但不是管理员
   if (to.meta.requiresAdmin && token) {
     const isAdmin = userInfo.roleCode === 'ADMIN' || userInfo.userType === 9
     if (!isAdmin) {
@@ -92,7 +92,6 @@ router.beforeEach((to, from, next) => {
     }
   }
 
-  // 已登录访问登录页 → 回首页
   if (to.path === '/login' && token) {
     next('/')
     return

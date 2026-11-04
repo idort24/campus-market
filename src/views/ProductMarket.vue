@@ -105,6 +105,10 @@ async function toggleFavorite(product) {
     AI助手
   </router-link>
 
+  <router-link to="/file-transfer">
+    文件传输
+  </router-link>
+
   <router-link to="/profile">
     个人中心
   </router-link>
