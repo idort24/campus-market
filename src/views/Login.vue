@@ -103,7 +103,7 @@ async function onLogin() {
 
 .login-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f0edff, #f7f8fc);
+  background: linear-gradient(135deg, #eff6ff, #f8fafc);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -113,10 +113,11 @@ async function onLogin() {
 .login-card {
   width: 400px;
   background: #fff;
-  border-radius: 18px;
+  border-radius: 20px;
   padding: 40px 38px;
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-lg);
   text-align: center;
+  border: 1px solid var(--border);
 }
 
 .logo {
@@ -168,7 +169,7 @@ async function onLogin() {
 }
 
 .form-item input:focus {
-  border-color: #6c5ce7;
+  border-color: var(--primary);
   background: #fff;
 }
 
@@ -178,7 +179,7 @@ async function onLogin() {
   padding: 13px;
   border: none;
   border-radius: 10px;
-  background: #6c5ce7;
+  background: var(--primary);
   color: #fff;
   font-size: 15px;
   font-weight: 600;
@@ -186,7 +187,7 @@ async function onLogin() {
   transition: 0.2s;
 }
 
-.login-btn:hover:not(:disabled) { background: #5a4bd1; }
+.login-btn:hover:not(:disabled) { background: var(--primary-hover); }
 .login-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .tip {
@@ -200,7 +201,7 @@ async function onLogin() {
   margin-top: 18px;
   border: none;
   background: none;
-  color: #6c5ce7;
+  color: var(--primary);
   cursor: pointer;
   font-size: 13px;
 }

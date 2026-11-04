@@ -60,26 +60,27 @@ function onLogout() {
 <style scoped>
 .admin-layout { height: 100vh; }
 .aside {
-  background: linear-gradient(180deg, #4a3f8a, #2d2758);
+  background: #0f172a;
   color: #fff;
 }
 .logo {
   display: flex; align-items: center; gap: 8px;
   padding: 20px 18px; font-size: 16px; font-weight: bold;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 .logo-icon { font-size: 22px; }
-.menu { border-right: none; padding: 10px 0; }
-:deep(.el-menu-item) { height: 46px; line-height: 46px; }
-:deep(.el-menu-item.is-active) { background: rgba(255,255,255,0.12) !important; }
+.menu { border-right: none; padding: 10px 0; background: transparent; }
+:deep(.el-menu-item) { height: 46px; line-height: 46px; color: #94a3b8; }
+:deep(.el-menu-item:hover) { background: rgba(255,255,255,0.05) !important; color: #fff; }
+:deep(.el-menu-item.is-active) { background: rgba(37,99,235,0.2) !important; color: #fff; }
 
 .header {
   background: #fff;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border);
   display: flex; align-items: center; justify-content: space-between;
 }
-.crumb { font-size: 15px; font-weight: 600; color: #333; }
+.crumb { font-size: 15px; font-weight: 600; color: var(--text); }
 .user { display: flex; align-items: center; gap: 12px; }
-.user .name { font-size: 14px; color: #555; }
-.main { background: #f5f6fa; padding: 20px; }
+.user .name { font-size: 14px; color: var(--text-secondary); }
+.main { background: var(--bg); padding: 24px; }
 </style>
