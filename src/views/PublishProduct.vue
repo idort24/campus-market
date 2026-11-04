@@ -74,21 +74,23 @@ function onCancel() {
   <div class="publish-page">
     <!-- 顶部导航 -->
     <header class="navbar">
-      <div class="logo">
-        <span class="logo-icon">🛍️</span>
-        <span>校园二手集市</span>
+      <div class="nav-inner">
+        <div class="logo" @click="router.push('/')">
+          <span class="logo-icon">🛍️</span><span class="logo-text">校园集市</span>
+        </div>
+        <nav class="nav-links">
+          <router-link to="/" exact-active-class="active">首页</router-link>
+          <router-link to="/product" active-class="active">商品市场</router-link>
+          <router-link to="/publish" active-class="active">发布商品</router-link>
+          <router-link to="/categories" active-class="active">分类浏览</router-link>
+          <router-link to="/ai" active-class="active">AI助手</router-link>
+          <router-link to="/profile" active-class="active">个人中心</router-link>
+          <router-link to="/admin" active-class="active">管理后台</router-link>
+        </nav>
+        <div class="nav-actions">
+          <router-link to="/publish" class="publish-btn">＋ 发布</router-link>
+        </div>
       </div>
-
-      <nav class="nav-menu">
-        <router-link to="/">首页</router-link>
-        <router-link to="/product">商品市场</router-link>
-        <router-link to="/publish" active-class="active">发布商品</router-link>
-        <router-link to="/categories">分类管理</router-link>
-        <router-link to="/ai">AI助手</router-link>
-        <router-link to="/file-transfer">文件传输</router-link>
-        <router-link to="/profile">个人中心</router-link>
-        <router-link to="/admin">权限管理</router-link>
-      </nav>
     </header>
 
     <!-- 表单主体 -->
@@ -197,37 +199,15 @@ function onCancel() {
 }
 
 /* 顶部导航 */
-.navbar {
-  height: 70px;
-  background: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 8%;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 21px;
-  font-weight: bold;
-}
-
-.logo-icon { font-size: 28px; }
-
-.nav-menu { display: flex; gap: 30px; }
-
-.nav-menu a {
-  color: #666;
-  text-decoration: none;
-  font-size: 15px;
-  padding: 8px 0;
-}
-
-.nav-menu a:hover,
-.nav-menu a.active { color: #c2410c; }
+.navbar { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,0.92); backdrop-filter: blur(16px); border-bottom: 1px solid #f0f0f0; }
+.nav-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+.logo { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 18px; font-weight: 800; }
+.logo-icon { font-size: 22px; }
+.nav-links { display: flex; gap: 20px; }
+.nav-links a { color: #64748b; font-size: 14px; }
+.nav-links a:hover, .nav-links a.active { color: #0f172a; font-weight: 600; }
+.nav-actions { display: flex; align-items: center; gap: 12px; }
+.publish-btn { background: #0f172a; color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 13px; }
 
 /* 主体 */
 .publish-container {

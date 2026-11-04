@@ -54,14 +54,23 @@ function goBack() {
   <div class="detail-page">
     <!-- 顶部导航 -->
     <header class="navbar">
-      <div class="logo">
-        <span>🛍️</span>
-        <span>校园二手集市</span>
+      <div class="nav-inner">
+        <div class="logo" @click="$router.push('/')">
+          <span class="logo-icon">🛍️</span><span class="logo-text">校园集市</span>
+        </div>
+        <nav class="nav-links">
+          <router-link to="/" exact-active-class="active">首页</router-link>
+          <router-link to="/product" active-class="active">商品市场</router-link>
+          <router-link to="/publish" active-class="active">发布商品</router-link>
+          <router-link to="/categories" active-class="active">分类浏览</router-link>
+          <router-link to="/ai" active-class="active">AI助手</router-link>
+          <router-link to="/profile" active-class="active">个人中心</router-link>
+          <router-link to="/admin" active-class="active">管理后台</router-link>
+        </nav>
+        <div class="nav-actions">
+          <button class="back-btn" @click="goBack">← 返回</button>
+        </div>
       </div>
-
-      <button class="back-btn" @click="goBack">
-        返回商品市场
-      </button>
     </header>
 
     <!-- 商品详情主体 -->
@@ -151,27 +160,16 @@ function goBack() {
 }
 
 /* 顶部导航 */
-.navbar {
-  height: 70px;
-  padding: 0 8%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #fff;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 20px;
-  font-weight: bold;
-}
-
-.logo span:first-child {
-  font-size: 26px;
-}
+.navbar { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,0.92); backdrop-filter: blur(16px); border-bottom: 1px solid #f0f0f0; }
+.nav-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+.logo { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 18px; font-weight: 800; }
+.logo-icon { font-size: 22px; }
+.nav-links { display: flex; gap: 20px; }
+.nav-links a { color: #64748b; font-size: 14px; }
+.nav-links a:hover, .nav-links a.active { color: #0f172a; font-weight: 600; }
+.nav-actions { display: flex; align-items: center; gap: 12px; }
+.back-btn { background: #fff; border: 1px solid #e2e8f0; padding: 6px 14px; border-radius: 16px; font-size: 13px; cursor: pointer; color: #475569; }
+.back-btn:hover { border-color: #2563eb; color: #2563eb; }
 
 /* 页面主体 */
 .detail-container {
