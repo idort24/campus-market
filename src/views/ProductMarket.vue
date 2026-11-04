@@ -58,10 +58,12 @@ async function toggleFavorite(product) {
         </div>
         <nav class="nav-links">
           <router-link to="/" exact-active-class="active">首页</router-link>
-          <router-link to="/product" active-class="active">逛逛</router-link>
-          <router-link to="/categories" active-class="active">分类</router-link>
+          <router-link to="/product" active-class="active">商品市场</router-link>
+          <router-link to="/publish" active-class="active">发布商品</router-link>
+          <router-link to="/categories" active-class="active">分类浏览</router-link>
           <router-link to="/ai" active-class="active">AI助手</router-link>
-          <router-link to="/profile" active-class="active">我的</router-link>
+          <router-link to="/profile" active-class="active">个人中心</router-link>
+          <router-link to="/admin" active-class="active">管理后台</router-link>
         </nav>
         <div class="nav-actions">
           <router-link to="/publish" class="publish-btn">＋ 发布</router-link>
@@ -116,7 +118,7 @@ async function toggleFavorite(product) {
 .nav-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
 .logo { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 18px; font-weight: 800; }
 .logo-icon { font-size: 22px; }
-.nav-links { display: flex; gap: 28px; }
+.nav-links { display: flex; gap: 20px; }
 .nav-links a { color: #64748b; font-size: 14px; }
 .nav-links a:hover, .nav-links a.active { color: #0f172a; font-weight: 600; }
 .nav-actions { display: flex; align-items: center; gap: 12px; }
