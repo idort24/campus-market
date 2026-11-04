@@ -6,56 +6,33 @@ import { fetchProducts } from '../api/product.js'
 import { addFavorite, removeFavorite } from '../api/favorites.js'
 
 const router = useRouter()
-
 const products = ref([])
 const loading = ref(false)
 const searchText = ref('')
 const activeCategory = ref('全部')
-
 const categories = ['全部', '数码产品', '教材书籍', '生活用品', '运动用品']
-
-// 已收藏的商品 id 集合（演示默认收藏了 1、4 号商品）
 const favoriteIds = ref(new Set([1, 4]))
 
 const filteredProducts = computed(() => {
-  return products.value.filter((product) => {
-    const matchCategory =
-      activeCategory.value === '全部' ||
-      product.category === activeCategory.value
-
-    const keyword = searchText.value.trim().toLowerCase()
-    const matchSearch =
-      product.name.toLowerCase().includes(keyword) ||
-      (product.description || '').toLowerCase().includes(keyword)
-
-    return matchCategory && matchSearch
+  return products.value.filter((p) => {
+    const cat = activeCategory.value === '全部' || p.category === activeCategory.value
+    const kw = searchText.value.trim().toLowerCase()
+    const match = p.name.toLowerCase().includes(kw) || (p.description || '').toLowerCase().includes(kw)
+    return cat && match
   })
 })
 
-// 从接口加载商品（Mock 模式返回本地数据，后端就绪后自动切换）
 async function loadProducts() {
   loading.value = true
-  try {
-    products.value = await fetchProducts()
-  } catch (e) {
-    ElMessage.error(String(e))
-  } finally {
-    loading.value = false
-  }
+  try { products.value = await fetchProducts() }
+  catch (e) { ElMessage.error(String(e)) }
+  finally { loading.value = false }
 }
-
 onMounted(loadProducts)
 
-// 跳转商品详情
-function goDetail(id) {
-  router.push(`/product/${id}`)
-}
+function goDetail(id) { router.push(`/product/${id}`) }
+function isFavorite(id) { return favoriteIds.value.has(id) }
 
-function isFavorite(id) {
-  return favoriteIds.value.has(id)
-}
-
-// 收藏 / 取消收藏
 async function toggleFavorite(product) {
   try {
     if (isFavorite(product.id)) {
@@ -68,498 +45,117 @@ async function toggleFavorite(product) {
       ElMessage.success('收藏成功')
     }
     favoriteIds.value = new Set(favoriteIds.value)
-  } catch (e) {
-    ElMessage.error(String(e))
-  }
+  } catch (e) { ElMessage.error(String(e)) }
 }
 </script>
 
 <template>
   <div class="market-page">
-    <!-- 顶部导航 -->
     <header class="navbar">
-      <div class="logo">
-        <span class="logo-icon">🛍️</span>
-        <span>校园二手集市</span>
+      <div class="nav-inner">
+        <div class="logo" @click="router.push('/')">
+          <span class="logo-icon">🛍️</span><span class="logo-text">校园集市</span>
+        </div>
+        <nav class="nav-links">
+          <router-link to="/" exact-active-class="active">首页</router-link>
+          <router-link to="/product" active-class="active">逛逛</router-link>
+          <router-link to="/categories" active-class="active">分类</router-link>
+          <router-link to="/ai" active-class="active">AI助手</router-link>
+          <router-link to="/profile" active-class="active">我的</router-link>
+        </nav>
+        <div class="nav-actions">
+          <router-link to="/publish" class="publish-btn">＋ 发布</router-link>
+          <router-link to="/profile" class="avatar-btn">👤</router-link>
+        </div>
       </div>
-
-      <nav class="nav-menu">
-
-  <router-link to="/">
-    首页
-  </router-link>
-
-  <router-link to="/product">
-    商品市场
-  </router-link>
-
-  <router-link to="/publish">
-    发布商品
-  </router-link>
-
-  <router-link to="/categories">
-    分类管理
-  </router-link>
-
-  <router-link to="/ai">
-    AI助手
-  </router-link>
-
-  <router-link to="/file-transfer">
-    文件传输
-  </router-link>
-
-  <router-link to="/profile">
-    个人中心
-  </router-link>
-
-  <router-link to="/admin">
-    权限管理
-  </router-link>
-
-</nav>
     </header>
 
-    <!-- 页面主体 -->
-    <main class="market-container">
-      <!-- 标题区域 -->
-      <section class="market-header">
-        <div>
-          <h1>商品市场</h1>
-          <p>发现校园里的好物，让闲置物品重新发挥价值</p>
-        </div>
-
+    <main class="container">
+      <div class="page-head">
+        <h1>商品市场</h1>
         <div class="search-box">
-          <span>🔍</span>
-          <input
-            v-model="searchText"
-            type="text"
-            placeholder="搜索你想要的商品..."
-          />
+          <input v-model="searchText" placeholder="搜索商品…" />
+          <button>🔍</button>
         </div>
-      </section>
+      </div>
 
-      <!-- 分类 -->
-      <section class="category-section">
-        <span class="category-title">商品分类：</span>
+      <div class="cat-bar">
+        <button v-for="c in categories" :key="c" :class="{ active: activeCategory === c }" @click="activeCategory = c">{{ c }}</button>
+      </div>
 
-        <button
-          v-for="category in categories"
-          :key="category"
-          :class="{ active: activeCategory === category }"
-          @click="activeCategory = category"
-        >
-          {{ category }}
-        </button>
-      </section>
-
-      <!-- 商品区域 -->
-      <section class="product-section">
-        <div class="section-title">
-          <h2>全部商品</h2>
-          <span>共 {{ filteredProducts.length }} 件商品</span>
-        </div>
-
-        <div v-if="filteredProducts.length > 0" class="product-grid">
-          <div
-            v-for="product in filteredProducts"
-            :key="product.id"
-            class="product-card"
-            @click="goDetail(product.id)"
-          >
-            <div class="product-image">
-              {{ product.icon }}
-            </div>
-
-            <div class="product-info">
-              <span class="product-category">
-                {{ product.category }}
-              </span>
-
-              <h3>{{ product.name }}</h3>
-
-              <p>{{ product.description }}</p>
-
-              <div class="product-bottom">
-                <span class="price">¥{{ product.price }}</span>
-                <div class="product-actions">
-                  <button
-                    class="fav-btn"
-                    :class="{ active: isFavorite(product.id) }"
-                    @click.stop="toggleFavorite(product)"
-                  >
-                    {{ isFavorite(product.id) ? '❤️ 已收藏' : '🤍 收藏' }}
-                  </button>
-                  <button class="detail-btn" @click.stop="goDetail(product.id)">
-                    查看详情
-                  </button>
-                </div>
-              </div>
+      <div v-if="filteredProducts.length" class="goods-grid">
+        <div v-for="p in filteredProducts" :key="p.id" class="goods-card" @click="goDetail(p.id)">
+          <div class="goods-img">{{ p.icon }}</div>
+          <div class="goods-body">
+            <div class="goods-title">{{ p.name }}</div>
+            <div class="goods-meta">{{ p.category }} · {{ p.location || '同校交易' }}</div>
+            <div class="goods-bottom">
+              <div class="goods-price">¥{{ p.price }}</div>
+              <button class="fav" :class="{ on: isFavorite(p.id) }" @click.stop="toggleFavorite(p)">
+                {{ isFavorite(p.id) ? '❤️' : '🤍' }}
+              </button>
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- 没有商品时显示 -->
-        <div v-else class="empty">
-          <div>🔎</div>
-          <h3>没有找到相关商品</h3>
-          <p>换个关键词试试看吧</p>
-        </div>
-      </section>
+      <div v-else class="empty">
+        <div class="empty-icon">🔎</div>
+        <h3>没有找到相关商品</h3>
+        <p>换个关键词试试</p>
+      </div>
     </main>
 
-    <!-- 底部 -->
-    <footer class="footer">
-      <p>校园二手集市 · 让闲置物品流动起来</p>
-    </footer>
+    <footer class="footer">© 2026 校园二手集市</footer>
   </div>
 </template>
 
 <style scoped>
-* {
-  box-sizing: border-box;
-}
+.market-page { min-height: 100vh; background: #fafbfc; }
+.navbar { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,0.92); backdrop-filter: blur(16px); border-bottom: 1px solid #f0f0f0; }
+.nav-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+.logo { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 18px; font-weight: 800; }
+.logo-icon { font-size: 22px; }
+.nav-links { display: flex; gap: 28px; }
+.nav-links a { color: #64748b; font-size: 14px; }
+.nav-links a:hover, .nav-links a.active { color: #0f172a; font-weight: 600; }
+.nav-actions { display: flex; align-items: center; gap: 12px; }
+.publish-btn { background: #0f172a; color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 13px; }
+.avatar-btn { font-size: 20px; }
 
-.market-page {
-  min-height: 100vh;
-  background: #f7f7fb;
-  color: #333;
-}
+.container { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+.page-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.page-head h1 { font-size: 24px; font-weight: 700; }
+.search-box { display: flex; background: #fff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 4px; }
+.search-box input { border: none; outline: none; padding: 6px 14px; width: 240px; font-size: 14px; }
+.search-box button { border: none; background: #2563eb; color: #fff; padding: 6px 16px; border-radius: 16px; cursor: pointer; }
 
-/* 顶部导航 */
-.navbar {
-  height: 70px;
-  background: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 8%;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
+.cat-bar { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+.cat-bar button { border: none; background: #fff; border: 1px solid #e2e8f0; padding: 7px 16px; border-radius: 16px; font-size: 13px; cursor: pointer; color: #64748b; transition: all .2s; }
+.cat-bar button:hover { border-color: #2563eb; color: #2563eb; }
+.cat-bar button.active { background: #2563eb; color: #fff; border-color: #2563eb; }
 
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 21px;
-  font-weight: bold;
-  color: #333;
-}
+.goods-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.goods-card { background: #fff; border-radius: 16px; overflow: hidden; cursor: pointer; transition: all .2s; }
+.goods-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+.goods-img { height: 160px; display: flex; align-items: center; justify-content: center; font-size: 56px; background: #f1f5f9; }
+.goods-body { padding: 12px 14px 14px; }
+.goods-title { font-size: 14px; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.goods-meta { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+.goods-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+.goods-price { color: #e11d48; font-size: 18px; font-weight: 700; }
+.fav { border: none; background: none; font-size: 16px; cursor: pointer; }
 
-.logo-icon {
-  font-size: 28px;
-}
+.empty { text-align: center; padding: 80px 20px; }
+.empty-icon { font-size: 48px; margin-bottom: 12px; }
+.empty h3 { color: #475569; margin-bottom: 8px; }
+.empty p { color: #94a3b8; font-size: 14px; }
 
-.nav-menu {
-  display: flex;
-  gap: 35px;
-}
+.footer { text-align: center; padding: 24px; color: #94a3b8; font-size: 13px; border-top: 1px solid #f0f0f0; margin-top: 40px; }
 
-.nav-menu a {
-  color: #666;
-  text-decoration: none;
-  cursor: pointer;
-  font-size: 15px;
-  padding: 8px 0;
-}
-
-.nav-menu a:hover,
-.nav-menu a.active {
-  color: #6c5ce7;
-}
-
-/* 页面主体 */
-.market-container {
-  width: 84%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 45px 0 60px;
-}
-
-/* 标题 */
-.market-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 35px;
-}
-
-.market-header h1 {
-  margin: 0 0 10px;
-  font-size: 34px;
-  color: #333;
-}
-
-.market-header p {
-  margin: 0;
-  color: #888;
-}
-
-/* 搜索框 */
-.search-box {
-  width: 350px;
-  height: 48px;
-  background: #fff;
-  border: 1px solid #e8e8ef;
-  border-radius: 24px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 18px;
-}
-
-.search-box span {
-  font-size: 18px;
-}
-
-.search-box input {
-  flex: 1;
-  border: none;
-  outline: none;
-  font-size: 14px;
-  color: #333;
-}
-
-.search-box input::placeholder {
-  color: #aaa;
-}
-
-/* 分类 */
-.category-section {
-  background: #fff;
-  padding: 20px 24px;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 35px;
-  box-shadow: 0 3px 15px rgba(0, 0, 0, 0.04);
-}
-
-.category-title {
-  color: #666;
-  font-size: 14px;
-  margin-right: 5px;
-}
-
-.category-section button {
-  border: none;
-  background: #f5f5f8;
-  color: #666;
-  padding: 9px 18px;
-  border-radius: 20px;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.category-section button:hover {
-  color: #6c5ce7;
-}
-
-.category-section button.active {
-  background: #6c5ce7;
-  color: white;
-}
-
-/* 商品标题 */
-.section-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
-}
-
-.section-title h2 {
-  margin: 0;
-  font-size: 24px;
-}
-
-.section-title span {
-  color: #999;
-  font-size: 14px;
-}
-
-/* 商品网格 */
-.product-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 22px;
-}
-
-/* 商品卡片 */
-.product-card {
-  background: #fff;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
-  transition: 0.25s;
-}
-
-.product-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-}
-
-.product-image {
-  height: 170px;
-  background: linear-gradient(135deg, #eeeaff, #f5f3ff);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 70px;
-}
-
-.product-info {
-  padding: 18px;
-}
-
-.product-category {
-  color: #6c5ce7;
-  font-size: 12px;
-  background: #f0edff;
-  padding: 4px 9px;
-  border-radius: 10px;
-}
-
-.product-info h3 {
-  margin: 13px 0 8px;
-  font-size: 17px;
-  color: #333;
-}
-
-.product-info p {
-  margin: 0;
-  height: 40px;
-  color: #999;
-  font-size: 13px;
-  line-height: 20px;
-}
-
-.product-bottom {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 18px;
-}
-
-.price {
-  color: #ff6b6b;
-  font-size: 21px;
-  font-weight: bold;
-}
-
-.detail-btn {
-  border: none;
-  background: #6c5ce7;
-  color: white;
-  padding: 7px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.detail-btn:hover {
-  background: #5b4bd6;
-}
-
-/* 商品操作区 */
-.product-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.fav-btn {
-  border: 1px solid #e5e5ef;
-  background: #fff;
-  color: #888;
-  padding: 7px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 12px;
-  transition: 0.2s;
-}
-
-.fav-btn:hover {
-  border-color: #ff6b6b;
-  color: #ff6b6b;
-}
-
-.fav-btn.active {
-  background: #fff0f0;
-  border-color: #ffb3b3;
-  color: #ff6b6b;
-}
-
-/* 没有商品 */
-.empty {
-  text-align: center;
-  padding: 80px 20px;
-  background: #fff;
-  border-radius: 16px;
-}
-
-.empty div {
-  font-size: 50px;
-}
-
-.empty h3 {
-  margin: 15px 0 8px;
-}
-
-.empty p {
-  color: #999;
-}
-
-/* 底部 */
-.footer {
-  background: #fff;
-  text-align: center;
-  padding: 25px;
-  color: #999;
-  font-size: 13px;
-}
-
-/* 响应式 */
 @media (max-width: 900px) {
-  .navbar {
-    padding: 0 4%;
-  }
-
-  .market-container {
-    width: 92%;
-  }
-
-  .market-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 25px;
-  }
-
-  .search-box {
-    width: 100%;
-  }
-
-  .product-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 600px) {
-  .nav-menu {
-    gap: 12px;
-  }
-
-  .nav-menu a {
-    font-size: 13px;
-  }
-
-  .category-section {
-    flex-wrap: wrap;
-  }
-
-  .product-grid {
-    grid-template-columns: 1fr;
-  }
+  .goods-grid { grid-template-columns: repeat(2, 1fr); }
+  .nav-links { display: none; }
+  .page-head { flex-direction: column; gap: 16px; align-items: flex-start; }
 }
 </style>
