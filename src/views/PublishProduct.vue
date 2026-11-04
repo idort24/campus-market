@@ -86,6 +86,7 @@ function onCancel() {
         <router-link to="/categories">分类管理</router-link>
         <router-link to="/ai">AI助手</router-link>
         <router-link to="/profile">个人中心</router-link>
+        <router-link to="/admin">权限管理</router-link>
       </nav>
     </header>
 
@@ -179,7 +180,7 @@ function onCancel() {
       </form>
 
       <p class="tip">
-        💡 当前为前端演示，商品会先存到本地；接入后端后将自动保存到服务器。
+        💡 当前为 Mock 模式，商品先写入前端内存数据；接入后端后自动保存到服务器数据库。
       </p>
     </main>
   </div>

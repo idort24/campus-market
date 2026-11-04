@@ -1,14 +1,24 @@
 <script setup>
-import { ref, computed } from 'vue'
-import { productList } from '../data/products.js'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { fetchProducts } from '../api/product.js'
+import { addFavorite, removeFavorite } from '../api/favorites.js'
 
+const router = useRouter()
+
+const products = ref([])
+const loading = ref(false)
 const searchText = ref('')
 const activeCategory = ref('全部')
 
 const categories = ['全部', '数码产品', '教材书籍', '生活用品', '运动用品']
 
+// 已收藏的商品 id 集合（演示默认收藏了 1、4 号商品）
+const favoriteIds = ref(new Set([1, 4]))
+
 const filteredProducts = computed(() => {
-  return productList.value.filter((product) => {
+  return products.value.filter((product) => {
     const matchCategory =
       activeCategory.value === '全部' ||
       product.category === activeCategory.value
@@ -16,11 +26,52 @@ const filteredProducts = computed(() => {
     const keyword = searchText.value.trim().toLowerCase()
     const matchSearch =
       product.name.toLowerCase().includes(keyword) ||
-      product.description.toLowerCase().includes(keyword)
+      (product.description || '').toLowerCase().includes(keyword)
 
     return matchCategory && matchSearch
   })
 })
+
+// 从接口加载商品（Mock 模式返回本地数据，后端就绪后自动切换）
+async function loadProducts() {
+  loading.value = true
+  try {
+    products.value = await fetchProducts()
+  } catch (e) {
+    ElMessage.error(String(e))
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(loadProducts)
+
+// 跳转商品详情
+function goDetail(id) {
+  router.push(`/product/${id}`)
+}
+
+function isFavorite(id) {
+  return favoriteIds.value.has(id)
+}
+
+// 收藏 / 取消收藏
+async function toggleFavorite(product) {
+  try {
+    if (isFavorite(product.id)) {
+      await removeFavorite(product.id)
+      favoriteIds.value.delete(product.id)
+      ElMessage.success('已取消收藏')
+    } else {
+      await addFavorite(product.id)
+      favoriteIds.value.add(product.id)
+      ElMessage.success('收藏成功')
+    }
+    favoriteIds.value = new Set(favoriteIds.value)
+  } catch (e) {
+    ElMessage.error(String(e))
+  }
+}
 </script>
 
 <template>
@@ -56,6 +107,10 @@ const filteredProducts = computed(() => {
 
   <router-link to="/profile">
     个人中心
+  </router-link>
+
+  <router-link to="/admin">
+    权限管理
   </router-link>
 
 </nav>
@@ -106,6 +161,7 @@ const filteredProducts = computed(() => {
             v-for="product in filteredProducts"
             :key="product.id"
             class="product-card"
+            @click="goDetail(product.id)"
           >
             <div class="product-image">
               {{ product.icon }}
@@ -122,7 +178,18 @@ const filteredProducts = computed(() => {
 
               <div class="product-bottom">
                 <span class="price">¥{{ product.price }}</span>
-                <button class="detail-btn">查看详情</button>
+                <div class="product-actions">
+                  <button
+                    class="fav-btn"
+                    :class="{ active: isFavorite(product.id) }"
+                    @click.stop="toggleFavorite(product)"
+                  >
+                    {{ isFavorite(product.id) ? '❤️ 已收藏' : '🤍 收藏' }}
+                  </button>
+                  <button class="detail-btn" @click.stop="goDetail(product.id)">
+                    查看详情
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -389,6 +456,35 @@ const filteredProducts = computed(() => {
 
 .detail-btn:hover {
   background: #5b4bd6;
+}
+
+/* 商品操作区 */
+.product-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.fav-btn {
+  border: 1px solid #e5e5ef;
+  background: #fff;
+  color: #888;
+  padding: 7px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: 0.2s;
+}
+
+.fav-btn:hover {
+  border-color: #ff6b6b;
+  color: #ff6b6b;
+}
+
+.fav-btn.active {
+  background: #fff0f0;
+  border-color: #ffb3b3;
+  color: #ff6b6b;
 }
 
 /* 没有商品 */

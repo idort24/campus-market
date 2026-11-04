@@ -1,19 +1,48 @@
 ﻿<script setup>
-import { computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-// 当前直接使用本地响应式数据源；接入后端后改为：
-//   import { fetchProductById } from '../../api/product.js'
-import { productList } from '../data/products.js'
+import { ElMessage } from 'element-plus'
+import { fetchProductById } from '../api/product.js'
+import { addFavorite, removeFavorite } from '../api/favorites.js'
 
 const route = useRoute()
 const router = useRouter()
 
-// 根据路由中的商品 ID 获取商品信息
-const product = computed(() => {
-  return productList.value.find(
-    item => item.id === Number(route.params.id)
-  )
-})
+const product = ref(null)
+const loading = ref(false)
+const isFav = ref(false)
+
+// 根据路由中的商品 ID 从接口获取商品
+async function loadDetail() {
+  loading.value = true
+  try {
+    product.value = await fetchProductById(route.params.id)
+  } catch (e) {
+    ElMessage.error(String(e))
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(loadDetail)
+
+// 收藏 / 取消收藏
+async function toggleFavorite() {
+  if (!product.value) return
+  try {
+    if (isFav.value) {
+      await removeFavorite(product.value.id)
+      isFav.value = false
+      ElMessage.success('已取消收藏')
+    } else {
+      await addFavorite(product.value.id)
+      isFav.value = true
+      ElMessage.success('收藏成功')
+    }
+  } catch (e) {
+    ElMessage.error(String(e))
+  }
+}
 
 // 返回商品市场
 function goBack() {
@@ -78,12 +107,22 @@ function goBack() {
 
           <!-- 提示信息 -->
           <div class="notice">
-            当前为前端演示数据，暂未连接真实卖家和交易接口。
+            当前数据来自前端接口层（Mock 模式），接入后端后将读取真实商品数据。
           </div>
 
-          <button class="back-btn" @click="goBack">
-            返回商品列表
-          </button>
+          <div class="detail-actions">
+            <button
+              class="fav-btn"
+              :class="{ active: isFav }"
+              @click="toggleFavorite"
+            >
+              {{ isFav ? '❤️ 已收藏' : '🤍 收藏' }}
+            </button>
+
+            <button class="back-btn" @click="goBack">
+              返回商品列表
+            </button>
+          </div>
         </div>
       </div>
 
@@ -247,6 +286,33 @@ function goBack() {
 
 .back-btn:hover {
   background: #9a3412;
+}
+
+/* 详情页操作按钮 */
+.detail-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.fav-btn {
+  border: 1px solid #ffb3b3;
+  background: #fff;
+  color: #ff6b6b;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: 0.2s;
+}
+
+.fav-btn:hover {
+  background: #fff0f0;
+}
+
+.fav-btn.active {
+  background: #fff0f0;
+  border-color: #ff6b6b;
 }
 
 /* 商品不存在 */

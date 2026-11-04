@@ -1,0 +1,45 @@
+<script setup>
+import { ref, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { adminApi } from '../../mock/admin.js'
+
+const tree = ref([])
+const loading = ref(false)
+
+async function load() {
+  loading.value = true
+  try { tree.value = await adminApi.getCategoryTree() } finally { loading.value = false }
+}
+
+onMounted(load)
+</script>
+
+<template>
+  <div>
+    <div class="page-header">
+      <h2>分类管理</h2>
+      <p class="desc">维护商品分类树形结构</p>
+    </div>
+
+    <el-card v-loading="loading">
+      <el-table :data="tree" row-key="id" border default-expand-all>
+        <el-table-column prop="name" label="分类名称" />
+        <el-table-column label="子分类数" width="120">
+          <template #default="{ row }">{{ row.children?.length || 0 }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="200">
+          <template #default>
+            <el-button size="small" type="primary">新增子分类</el-button>
+            <el-button size="small">编辑</el-button>
+            <el-button size="small" type="danger">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+  </div>
+</template>
+
+<style scoped>
+.page-header h2 { margin: 0 0 6px; font-size: 20px; color: #333; }
+.desc { margin: 0 0 18px; color: #888; font-size: 13px; }
+</style>

@@ -1,3 +1,33 @@
+<script setup>
+import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+
+const router = useRouter()
+
+// 从 localStorage 读取登录用户信息
+const userInfo = computed(() => {
+  try {
+    return JSON.parse(localStorage.getItem('userInfo') || 'null')
+  } catch {
+    return null
+  }
+})
+
+const isLoggedIn = computed(() => !!localStorage.getItem('token') && !!userInfo.value)
+
+function goLogin() {
+  router.push('/login')
+}
+
+function logout() {
+  localStorage.removeItem('token')
+  localStorage.removeItem('userInfo')
+  ElMessage.success('已退出登录')
+  router.push('/')
+}
+</script>
+
 <template>
   <div class="profile-page">
 
@@ -32,6 +62,10 @@
           个人中心
         </router-link>
 
+        <router-link to="/admin">
+          权限管理
+        </router-link>
+
       </nav>
     </header>
 
@@ -46,25 +80,42 @@
 
         <h1>个人中心</h1>
 
-        <p>欢迎来到校园二手集市个人中心</p>
+        <p>{{ isLoggedIn ? '欢迎回来，正在使用系统' : '欢迎来到校园二手集市个人中心' }}</p>
 
         <div class="info">
 
           <div>
             <span>用户名</span>
-            <strong>校园用户</strong>
+            <strong>{{ userInfo?.nickName || userInfo?.studentNo || '未登录' }}</strong>
           </div>
 
           <div>
-            <span>我的商品</span>
-            <strong>0 件</strong>
+            <span>角色</span>
+            <strong>{{ userInfo?.roleName || '—' }}</strong>
           </div>
 
           <div>
             <span>我的收藏</span>
-            <strong>0 件</strong>
+            <strong>2 件</strong>
           </div>
 
+        </div>
+
+        <div class="actions">
+          <button v-if="!isLoggedIn" class="login-btn" @click="goLogin">
+            登 录
+          </button>
+          <template v-else>
+            <div class="quick-links">
+              <button @click="router.push('/my-publishes')">我的发布</button>
+              <button @click="router.push('/my-favorites')">我的收藏</button>
+              <button @click="router.push('/my-orders')">我的订单</button>
+              <button v-if="userInfo?.roleCode === 'ADMIN' || userInfo?.userType === 9" @click="router.push('/admin')">后台管理</button>
+            </div>
+            <button class="logout-btn" @click="logout">
+              退出登录
+            </button>
+          </template>
         </div>
 
       </div>
@@ -200,6 +251,47 @@
   color: #6c5ce7;
   font-size: 18px;
 }
+
+/* 登录 / 退出按钮 */
+.actions {
+  margin-top: 30px;
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+}
+
+.login-btn,
+.logout-btn {
+  border: none;
+  padding: 11px 34px;
+  border-radius: 10px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.login-btn {
+  background: #6c5ce7;
+  color: #fff;
+}
+
+.login-btn:hover { background: #5a4bd1; }
+
+.logout-btn {
+  background: #f1f1f6;
+  color: #666;
+}
+
+.logout-btn:hover { background: #e6e6ee; }
+
+.quick-links {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 16px;
+}
+.quick-links button {
+  border: 1px solid #ddd; background: #fff; color: #555;
+  padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px;
+}
+.quick-links button:hover { border-color: #6c5ce7; color: #6c5ce7; }
 
 
 @media (max-width: 700px) {

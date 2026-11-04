@@ -61,6 +61,14 @@
           个人中心
         </router-link>
 
+        <!-- 权限管理 -->
+        <router-link
+          to="/admin"
+          active-class="active"
+        >
+          权限管理
+        </router-link>
+
       </nav>
 
     </header>

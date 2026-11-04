@@ -1,7 +1,7 @@
 ﻿<script setup>
 import { ref, onMounted } from 'vue'
 import { ElTree } from 'element-plus'
-import { fetchCategoryTree, fetchCategoryTable } from '../api/category.js'
+import { getCategoryTree, getCategoryTable } from '../api/categories.js'
 
 // el-tree 用的嵌套数据
 const treeData = ref([])
@@ -14,8 +14,8 @@ const selected = ref(null)
 const treeKey = ref(null)
 
 async function loadData() {
-  treeData.value = await fetchCategoryTree()
-  flatTable.value = await fetchCategoryTable()
+  treeData.value = await getCategoryTree()
+  flatTable.value = await getCategoryTable()
 }
 
 // 点击树节点
@@ -69,19 +69,19 @@ onMounted(loadData)
         <router-link to="/categories" active-class="active">分类管理</router-link>
         <router-link to="/ai">AI助手</router-link>
         <router-link to="/profile">个人中心</router-link>
+        <router-link to="/admin" active-class="active">权限管理</router-link>
       </nav>
     </header>
 
     <main class="cat-container">
       <section class="cat-header">
         <h1>商品分类管理</h1>
-        <p>基于 Element Plus Tree 组件 · 当前使用本地模拟数据，后续对接 MySQL 分类表</p>
       </section>
 
       <div class="cat-layout">
         <!-- 左：分类树 -->
         <div class="tree-card">
-          <h2>📂 分类树</h2>
+          <h2>分类树</h2>
           <p class="hint">点击节点查看详情，可展开/折叠父分类</p>
           <el-tree
             :data="treeData"
@@ -95,7 +95,7 @@ onMounted(loadData)
 
         <!-- 右：选中详情 -->
         <div class="info-card">
-          <h2>📌 当前选中</h2>
+          <h2>当前选中</h2>
 
           <div v-if="selected" class="info-body">
             <div class="info-row">
@@ -132,7 +132,7 @@ onMounted(loadData)
 
       <!-- 数据格式说明 -->
       <div class="schema-card">
-        <h3>🔌 与后端 MySQL 邻接表的对接约定</h3>
+        <h3>与后端 MySQL 邻接表的对接约定</h3>
         <p>
           分类表使用 <code>id</code> + <code>parent_id</code> 组织层级：
           根分类 <code>parent_id = 0</code>，子分类的 <code>parent_id</code> 指向父分类的 <code>id</code>。
