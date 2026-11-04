@@ -1,210 +1,211 @@
 <script setup>
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 const router = useRouter()
-const goProduct = () => router.push('/product')
+const search = ref('')
+function doSearch() { router.push('/product') }
 </script>
 
 <template>
   <div class="home-page">
+    <!-- 顶部导航 -->
     <header class="navbar">
-      <div class="logo">
-        <span class="logo-icon">🛍️</span>
-        <span>校园二手集市</span>
+      <div class="nav-inner">
+        <div class="logo" @click="router.push('/')">
+          <span class="logo-icon">🛍️</span>
+          <span class="logo-text">校园集市</span>
+        </div>
+        <nav class="nav-links">
+          <router-link to="/" exact-active-class="active">首页</router-link>
+          <router-link to="/product" active-class="active">逛逛</router-link>
+          <router-link to="/categories" active-class="active">分类</router-link>
+          <router-link to="/ai" active-class="active">AI助手</router-link>
+        </nav>
+        <div class="nav-actions">
+          <router-link to="/publish" class="publish-btn">＋ 发布</router-link>
+          <router-link to="/profile" class="avatar-btn">👤</router-link>
+        </div>
       </div>
-      <nav class="nav-menu">
-        <router-link to="/" exact-active-class="active">首页</router-link>
-        <router-link to="/product" active-class="active">商品市场</router-link>
-        <router-link to="/publish" active-class="active">发布商品</router-link>
-        <router-link to="/categories" active-class="active">分类浏览</router-link>
-        <router-link to="/ai" active-class="active">AI助手</router-link>
-        <router-link to="/profile" active-class="active">个人中心</router-link>
-        <router-link to="/admin" active-class="active">管理后台</router-link>
-      </nav>
     </header>
 
-    <main>
-      <section class="hero">
-        <div class="hero-left">
-          <p class="welcome">👋 欢迎来到校园二手集市</p>
-          <h1>让闲置物品<br><span>重新找到价值</span></h1>
-          <p class="desc">专为大学生打造的校园二手交易平台，轻松寻找、发布和分享校园好物。</p>
-          <div class="buttons">
-            <router-link to="/product" class="primary-btn">🛍️ 开始逛逛</router-link>
-            <router-link to="/ai" class="secondary-btn">🤖 AI智能助手</router-link>
-          </div>
+    <!-- Hero 搜索区 -->
+    <section class="hero">
+      <div class="hero-inner">
+        <h1>校园闲置，<em>就近淘</em></h1>
+        <p class="hero-sub">教材 · 数码 · 生活用品，同校交易更放心</p>
+        <div class="search-bar">
+          <input v-model="search" @keyup.enter="doSearch" placeholder="搜搜你想要的…" />
+          <button @click="doSearch">搜索</button>
         </div>
-        <div class="hero-card">
-          <div class="card-icon">📚</div>
-          <h2>校园好物</h2>
-          <p class="card-description">教材 · 电子产品 · 生活用品</p>
-          <div class="products">
-            <div>📖 高数教材</div>
-            <div>🎧 蓝牙耳机</div>
-            <div>🪑 宿舍用品</div>
-          </div>
+        <div class="hero-tags">
+          <span># 高数教材</span><span># 蓝牙耳机</span><span># 宿舍好物</span><span># 考研资料</span>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <section class="features">
-        <div class="section-title">
-          <p>EXPLORE</p>
-          <h2>你想做什么？</h2>
+    <!-- 分类入口 -->
+    <section class="section">
+      <div class="section-head"><h2>热门分类</h2></div>
+      <div class="cat-grid">
+        <div class="cat-item" @click="router.push('/product')">
+          <div class="cat-icon">📱</div><span>数码产品</span>
         </div>
-        <div class="feature-grid">
-          <div class="feature-card">
-            <div class="feature-icon">🛒</div>
-            <h3>浏览商品</h3>
-            <p>发现校园二手商品</p>
-            <router-link to="/product" class="feature-link">去逛逛 →</router-link>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon">🤖</div>
-            <h3>AI助手</h3>
-            <p>智能寻找商品</p>
-            <router-link to="/ai" class="feature-link">开始咨询 →</router-link>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon">📦</div>
-            <h3>发布商品</h3>
-            <p>发布你的闲置物品</p>
-            <router-link to="/publish" class="feature-link">发布商品 →</router-link>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon">👤</div>
-            <h3>个人中心</h3>
-            <p>查看我的信息</p>
-            <router-link to="/profile" class="feature-link">进入我的 →</router-link>
-          </div>
+        <div class="cat-item" @click="router.push('/product')">
+          <div class="cat-icon">📚</div><span>教材书籍</span>
         </div>
-      </section>
+        <div class="cat-item" @click="router.push('/product')">
+          <div class="cat-icon">🛋️</div><span>生活用品</span>
+        </div>
+        <div class="cat-item" @click="router.push('/product')">
+          <div class="cat-icon">⚽</div><span>运动户外</span>
+        </div>
+        <div class="cat-item" @click="router.push('/product')">
+          <div class="cat-icon">🎹</div><span>乐器爱好</span>
+        </div>
+        <div class="cat-item" @click="router.push('/product')">
+          <div class="cat-icon">🚲</div><span>代步工具</span>
+        </div>
+        <div class="cat-item" @click="router.push('/product')">
+          <div class="cat-icon">👗</div><span>服饰鞋包</span>
+        </div>
+        <div class="cat-item" @click="router.push('/product')">
+          <div class="cat-icon">➕</div><span>全部分类</span>
+        </div>
+      </div>
+    </section>
 
-      <section class="recommend">
-        <div class="section-title">
-          <p>RECOMMEND</p>
-          <h2>热门商品</h2>
-        </div>
-        <div class="product-grid">
-          <div class="product-card">
-            <div class="product-image">📚</div>
-            <div class="product-info">
-              <h3>高等数学教材</h3>
-              <p>九成新 · 大一教材</p>
-              <strong>¥20</strong>
-            </div>
-          </div>
-          <div class="product-card">
-            <div class="product-image">🎧</div>
-            <div class="product-info">
-              <h3>蓝牙耳机</h3>
-              <p>使用半年 · 功能正常</p>
-              <strong>¥50</strong>
-            </div>
-          </div>
-          <div class="product-card">
-            <div class="product-image">🪑</div>
-            <div class="product-info">
-              <h3>宿舍椅子</h3>
-              <p>成色良好 · 自提</p>
-              <strong>¥30</strong>
-            </div>
+    <!-- 商品流 -->
+    <section class="section">
+      <div class="section-head">
+        <h2>为你推荐</h2>
+        <router-link to="/product" class="more-link">查看全部 →</router-link>
+      </div>
+      <div class="goods-grid">
+        <div class="goods-card" @click="router.push('/product/1')">
+          <div class="goods-img" style="background:#dbeafe">📚</div>
+          <div class="goods-body">
+            <div class="goods-title">高等数学教材 九成新</div>
+            <div class="goods-meta">教材书籍 · 图书馆旁</div>
+            <div class="goods-price">¥20 <del>¥45</del></div>
           </div>
         </div>
-      </section>
-    </main>
+        <div class="goods-card" @click="router.push('/product/2')">
+          <div class="goods-img" style="background:#dcfce7">🎧</div>
+          <div class="goods-body">
+            <div class="goods-title">蓝牙耳机 功能完好</div>
+            <div class="goods-meta">数码产品 · 宿舍区</div>
+            <div class="goods-price">¥50</div>
+          </div>
+        </div>
+        <div class="goods-card" @click="router.push('/product/3')">
+          <div class="goods-img" style="background:#fef3c7">🪑</div>
+          <div class="goods-body">
+            <div class="goods-title">宿舍椅子 结实耐用</div>
+            <div class="goods-meta">生活用品 · 生活区</div>
+            <div class="goods-price">¥30</div>
+          </div>
+        </div>
+        <div class="goods-card" @click="router.push('/product/4')">
+          <div class="goods-img" style="background:#fce7f3">⌨️</div>
+          <div class="goods-body">
+            <div class="goods-title">机械键盘 青轴</div>
+            <div class="goods-meta">数码产品 · 教学楼</div>
+            <div class="goods-price">¥80</div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-    <footer>© 2026 校园二手集市 · 让闲置物品流动起来</footer>
+    <footer class="footer">© 2026 校园二手集市 · 让闲置流动起来</footer>
   </div>
 </template>
 
 <style scoped>
-.home-page { min-height: 100vh; background: var(--bg); color: var(--text); }
+.home-page { min-height: 100vh; background: #fafbfc; }
 
 /* 导航 */
 .navbar {
   position: sticky; top: 0; z-index: 100;
-  height: 64px; background: rgba(255,255,255,0.9); backdrop-filter: blur(12px);
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 5%; border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,0.92); backdrop-filter: blur(16px);
+  border-bottom: 1px solid #f0f0f0;
 }
-.logo { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 700; color: var(--text); }
-.logo-icon { font-size: 24px; }
-.nav-menu { display: flex; gap: 28px; }
-.nav-menu a { color: var(--text-secondary); font-size: 14px; transition: color 0.2s; }
-.nav-menu a:hover { color: var(--primary); }
-.nav-menu a.active { color: var(--primary); font-weight: 600; }
+.nav-inner {
+  max-width: 1200px; margin: 0 auto; padding: 0 24px;
+  height: 56px; display: flex; align-items: center; justify-content: space-between;
+}
+.logo { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 18px; font-weight: 800; }
+.logo-icon { font-size: 22px; }
+.nav-links { display: flex; gap: 28px; }
+.nav-links a { color: #64748b; font-size: 14px; transition: color .2s; }
+.nav-links a:hover, .nav-links a.active { color: #0f172a; font-weight: 600; }
+.nav-actions { display: flex; align-items: center; gap: 12px; }
+.publish-btn {
+  background: #0f172a; color: #fff; padding: 8px 16px; border-radius: 20px;
+  font-size: 13px; font-weight: 500;
+}
+.publish-btn:hover { background: #1e293b; }
+.avatar-btn { font-size: 20px; }
 
 /* Hero */
 .hero {
-  padding: 80px 5%; display: flex; justify-content: space-between; align-items: center; gap: 60px;
-  background: linear-gradient(180deg, var(--primary-light) 0%, var(--bg) 100%);
+  background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+  padding: 64px 24px 56px;
 }
-.hero-left { max-width: 580px; }
-.welcome { color: var(--primary); font-size: 15px; font-weight: 600; margin-bottom: 16px; }
-.hero h1 { margin: 0; font-size: 48px; line-height: 1.2; font-weight: 800; letter-spacing: -1px; }
-.hero h1 span { color: var(--primary); }
-.desc { margin-top: 20px; font-size: 16px; color: var(--text-secondary); line-height: 1.7; }
-.buttons { margin-top: 32px; display: flex; gap: 14px; }
-.primary-btn, .secondary-btn {
-  display: inline-block; padding: 12px 24px; border-radius: var(--radius-sm);
-  font-size: 14px; font-weight: 500; transition: all 0.2s;
+.hero-inner { max-width: 720px; margin: 0 auto; text-align: center; }
+.hero h1 { font-size: 40px; font-weight: 800; color: #0f172a; letter-spacing: -1px; line-height: 1.2; }
+.hero h1 em { font-style: normal; color: #2563eb; }
+.hero-sub { color: #64748b; margin-top: 12px; font-size: 15px; }
+.search-bar {
+  margin: 28px auto 0; max-width: 520px;
+  display: flex; background: #fff; border-radius: 24px; padding: 4px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;
 }
-.primary-btn { background: var(--primary); color: #fff; }
-.primary-btn:hover { background: var(--primary-hover); transform: translateY(-1px); }
-.secondary-btn { background: #fff; color: var(--primary); border: 1px solid var(--border); }
-.secondary-btn:hover { border-color: var(--primary); background: var(--primary-light); }
+.search-bar input {
+  flex: 1; border: none; outline: none; padding: 10px 16px; font-size: 14px; background: transparent;
+}
+.search-bar button {
+  background: #2563eb; color: #fff; border: none; padding: 10px 24px;
+  border-radius: 20px; font-size: 14px; font-weight: 500; cursor: pointer;
+}
+.hero-tags { margin-top: 16px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.hero-tags span { font-size: 12px; color: #94a3b8; }
 
-.hero-card {
-  width: 320px; padding: 32px; background: #fff; border-radius: 20px;
-  text-align: center; box-shadow: var(--shadow-lg);
-}
-.card-icon { font-size: 56px; }
-.hero-card h2 { margin: 12px 0 4px; font-size: 22px; }
-.card-description { color: var(--text-light); font-size: 14px; }
-.products { margin-top: 20px; display: flex; flex-direction: column; gap: 8px; }
-.products div { background: var(--bg); padding: 10px 14px; border-radius: var(--radius-sm); text-align: left; font-size: 14px; }
+/* 通用 section */
+.section { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
+.section-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 20px; }
+.section-head h2 { font-size: 20px; font-weight: 700; color: #0f172a; }
+.more-link { font-size: 13px; color: #64748b; }
 
-/* 功能区 */
-.features { padding: 60px 5%; }
-.section-title { text-align: center; margin-bottom: 32px; }
-.section-title p { color: var(--primary); font-size: 12px; letter-spacing: 2px; margin-bottom: 4px; font-weight: 600; }
-.section-title h2 { margin: 0; font-size: 28px; font-weight: 700; }
-.feature-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-.feature-card {
-  background: #fff; padding: 24px; border-radius: 16px; border: 1px solid var(--border);
-  transition: all 0.2s;
+/* 分类宫格 */
+.cat-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 16px; }
+.cat-item { text-align: center; cursor: pointer; }
+.cat-item:hover .cat-icon { transform: scale(1.08); }
+.cat-icon {
+  width: 56px; height: 56px; margin: 0 auto 8px;
+  background: #fff; border-radius: 16px; display: flex; align-items: center; justify-content: center;
+  font-size: 26px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: transform .2s;
 }
-.feature-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); border-color: var(--primary-light); }
-.feature-icon { font-size: 36px; margin-bottom: 8px; }
-.feature-card h3 { margin: 6px 0; font-size: 17px; }
-.feature-card p { color: var(--text-secondary); font-size: 13px; min-height: 40px; }
-.feature-link { display: inline-block; color: var(--primary); font-size: 14px; font-weight: 500; margin-top: 8px; }
+.cat-item span { font-size: 12px; color: #475569; }
 
-/* 推荐商品 */
-.recommend { padding: 60px 5%; }
-.product-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-.product-card {
-  background: #fff; border-radius: 16px; overflow: hidden; border: 1px solid var(--border);
-  transition: all 0.2s;
+/* 商品流 */
+.goods-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.goods-card {
+  background: #fff; border-radius: 16px; overflow: hidden; cursor: pointer;
+  transition: transform .2s, box-shadow .2s;
 }
-.product-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
-.product-image { height: 160px; display: flex; align-items: center; justify-content: center; background: var(--primary-light); font-size: 56px; }
-.product-info { padding: 16px; }
-.product-info h3 { margin: 0 0 4px; font-size: 16px; }
-.product-info p { color: var(--text-light); font-size: 13px; }
-.product-info strong { color: var(--primary); font-size: 20px; }
+.goods-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+.goods-img { height: 160px; display: flex; align-items: center; justify-content: center; font-size: 56px; }
+.goods-body { padding: 12px 14px 14px; }
+.goods-title { font-size: 14px; color: #1e293b; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.goods-meta { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+.goods-price { margin-top: 8px; color: #e11d48; font-size: 18px; font-weight: 700; }
+.goods-price del { color: #cbd5e1; font-size: 12px; font-weight: 400; margin-left: 4px; }
 
-footer { background: #fff; padding: 24px; text-align: center; color: var(--text-light); border-top: 1px solid var(--border); font-size: 13px; }
+.footer { text-align: center; padding: 32px; color: #94a3b8; font-size: 13px; border-top: 1px solid #f0f0f0; margin-top: 20px; }
 
-@media (max-width: 1000px) {
-  .hero { flex-direction: column; text-align: center; }
-  .buttons { justify-content: center; }
-  .feature-grid { grid-template-columns: repeat(2, 1fr); }
-  .product-grid { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 700px) {
-  .hero h1 { font-size: 34px; }
-  .feature-grid, .product-grid { grid-template-columns: 1fr; }
-  .nav-menu { gap: 16px; }
-  .nav-menu a { font-size: 13px; }
+@media (max-width: 900px) {
+  .cat-grid { grid-template-columns: repeat(4, 1fr); }
+  .goods-grid { grid-template-columns: repeat(2, 1fr); }
+  .nav-links { display: none; }
 }
 </style>
