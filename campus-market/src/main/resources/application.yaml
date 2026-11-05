@@ -1,0 +1,23 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: campus-market
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # 关键点：末尾加了 allowPublicKeyRetrieval=true，解决连接报错
+    url: jdbc:mysql://localhost:3306/campus_market?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: Root123456  # 换成你自己的数据库密码！！！
+
+mybatis-plus:
+  configuration:
+    # 开启控制台 SQL 打印，方便你看到 MyBatis-Plus 实际生成的 SQL
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    # 开启驼峰命名映射（比如数据库的 create_time 自动映射到实体类的 createTime）
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      # 全局设置主键类型为数据库自增
+      id-type: auto
