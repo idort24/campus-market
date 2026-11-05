@@ -31,3 +31,12 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### 项目自定义 ###
+file-storage/
+file-test/
+run-err.log
+run-out.log
+vue-frontend/
+vue-frontend.zip
+-o

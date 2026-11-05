@@ -1,15 +1,26 @@
 server:
-  port: 8080
+  port: 8090
 
 spring:
   application:
     name: campus-market
+  servlet:
+    multipart:
+      # 单个分片最大 20MB（分片大小建议 5MB，留足余量）
+      max-file-size: 20MB
+      # 单次请求最大 200MB（批量上传小文件 / 大分片请求）
+      max-request-size: 200MB
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     # 关键点：末尾加了 allowPublicKeyRetrieval=true，解决连接报错
     url: jdbc:mysql://localhost:3306/campus_market?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
     username: root
     password: Root123456  # 换成你自己的数据库密码！！！
+
+# 文件存储根目录（分片临时目录 staging + 最终目录 final）
+file:
+  storage:
+    dir: file-storage
 
 mybatis-plus:
   configuration:

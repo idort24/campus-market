@@ -1,0 +1,53 @@
+@startuml
+' 设置一些基础样式，让图看起来更清爽
+skinparam classAttributeIconSize 0
+hide empty members
+skinparam nodesep 50
+skinparam ranksep 50
+
+' ================= 1. 核心用户与商品 =================
+class SysUser
+class Goods
+class GoodsCategory
+
+' ================= 2. 交易与互动记录 =================
+class TradeOrder
+class Evaluation
+class GoodsCollect
+class GoodsStat
+
+' ================= 3. 聊天与举报 =================
+class ChatMessage
+class ReportWorkOrder
+
+' ================= 4. 系统与AI扩展 =================
+class DictType
+class DictData
+class RagHistoryRecord
+class DemoFileBlob
+
+' ================= 连线关系区 =================
+
+' 基础字典关联
+DictType "1" --> "*" DictData : 包含
+
+' 商品分类与发布
+GoodsCategory "1" --> "*" Goods : 分类
+SysUser "1" --> "*" Goods : 发布
+
+' 订单、评价与收藏
+Goods "1" --> "*" TradeOrder : 包含
+SysUser "1" --> "*" TradeOrder : 下单
+TradeOrder "1" --> "1" Evaluation : 产生
+
+Goods "1" --> "*" GoodsCollect : 被收藏
+SysUser "1" --> "*" GoodsCollect : 收藏
+Goods "1" --> "1" GoodsStat : 统计
+
+' 聊天与举报
+SysUser "1" --> "*" ChatMessage : 发送
+SysUser "1" --> "*" ReportWorkOrder : 提交
+
+' AI 相关的孤立节点关联（为了不让它们孤立）
+SysUser "1" --> "*" RagHistoryRecord : AI检索
+@enduml
