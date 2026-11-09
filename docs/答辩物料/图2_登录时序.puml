@@ -1,0 +1,75 @@
+@startuml
+title 登录与鉴权时序（验证码 · 限流 · 黑名单 · 权限菜单）
+autonumber
+scale 3
+skinparam shadowing false
+skinparam defaultFontName "Microsoft YaHei"
+skinparam sequenceMessageAlign left
+
+participant "前端\nLogin.vue" as FE
+participant "AuthController\n/api/v1/auth" as AC
+participant "SysUserController\n/api/v1/user" as UC
+participant "AuthInterceptor" as INT
+participant "RbacUserController\n/api/v1/user" as RB
+participant "Redis" as R
+database "MySQL" as DB
+
+FE -> AC : POST /api/v1/auth/captcha
+activate AC
+AC -> AC : 生成 4 位验证码
+AC -> R : SET captcha:{key} = 验证码  TTL 60 秒
+AC --> FE : data{captchaKey, imageBase64}
+deactivate AC
+
+FE -> FE : 用户输入账号、密码、验证码
+FE -> UC : POST /api/v1/user/login\n{username, password, captchaKey, captchaCode}
+activate UC
+
+UC -> R : GET captcha:{key}
+alt 验证码不存在或已过期
+  UC --> FE : code≠1  验证码已失效
+else 验证码不匹配
+  UC --> FE : code≠1  验证码错误
+else 验证通过
+  UC -> R : DEL captcha:{key}  一次性作废
+  UC -> R : INCR login:limit:phone:{phone}  TTL 60 秒
+  alt 60 秒内超过 5 次
+    UC --> FE : code≠1  操作过于频繁，请稍后再试
+  else 未超限
+    UC -> DB : 查 sys_user 并按 BCrypt 校验密码
+    UC -> DB : 查角色与权限码
+    UC -> UC : 签发 JWT
+    UC --> FE : {code:1, data:{token, user, roles, perms}}
+  end
+end
+deactivate UC
+
+== 登录后的受保护请求 ==
+
+FE -> INT : GET /api/v1/user/permissions\nAuthorization: Bearer <token>
+activate INT
+INT -> R : EXISTS token:black:{token}
+alt 命中黑名单（已退出登录）
+  INT --> FE : 401  请重新登录
+else 未命中黑名单
+  INT -> INT : 校验 JWT 签名与过期时间
+  INT -> RB : 放行，转发到 Controller
+  activate RB
+  RB -> R : 读权限码（缓存优先）
+  RB -> DB : 未命中则查 sys_role_permission / sys_permission
+  RB --> FE : {code:1, data:["goods:audit", ...]}
+  deactivate RB
+end
+deactivate INT
+
+FE -> RB : GET /api/v1/user/menus
+RB --> FE : {code:1, data:[{path, title, icon}]}
+
+== 退出登录 ==
+
+FE -> AC : POST /api/v1/auth/logout\nAuthorization: Bearer <token>
+AC -> R : SET token:black:{token}\nTTL = 该 token 剩余有效期
+AC --> FE : {code:1, msg:"已退出"}
+note right of R : 之后再用同一个 token 访问，\n拦截器查黑名单直接返回 401
+
+@enduml

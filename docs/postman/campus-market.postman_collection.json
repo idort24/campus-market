@@ -1,0 +1,303 @@
+{
+  "info": {
+    "name": "campus-market 验收用例集（周泓颖）",
+    "description": "覆盖 5 类：验证码 / 登录 / 退出黑名单 / 限流 / 缓存命中。\n使用前先把 baseUrl 改成后端地址（本机 http://localhost:8090，联调时改成马智贤的局域网 IP）。\n注意：当前断言按分工表 code=1 判定成功；若后端最终统一成 200，把每一处 code 断言里的 1 改成 200 即可（全集合搜 \"code\"）。",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8090", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "oldToken", "value": "", "type": "string" },
+    { "key": "captchaKey", "value": "", "type": "string" },
+    { "key": "captchaCode", "value": "", "type": "string" },
+    { "key": "phone", "value": "13800138000", "type": "string" },
+    { "key": "password", "value": "123456", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "01 验证码｜获取图形验证码",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('返回 code=1', () => pm.expect(body.code).to.eql(1));",
+              "pm.test('含 captchaKey 与 imageBase64', () => {",
+              "  pm.expect(body.data).to.have.property('captchaKey');",
+              "  pm.expect(body.data).to.have.property('imageBase64');",
+              "});",
+              "if (body.data && body.data.captchaKey) {",
+              "  pm.collectionVariables.set('captchaKey', body.data.captchaKey);",
+              "  console.log('captchaKey =', body.data.captchaKey);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/auth/captcha"
+      }
+    },
+    {
+      "name": "02 验证码｜错误验证码登录被拒",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.test('错误验证码不能登录成功', () => pm.expect(body.code).to.not.eql(1));",
+              "pm.test('错误提示不为空', () => pm.expect(body.msg).to.be.a('string').and.not.empty);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"2024110640\",\n  \"password\": \"123456\",\n  \"captchaKey\": \"{{captchaKey}}\",\n  \"captchaCode\": \"0000\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/api/v1/user/login"
+      }
+    },
+    {
+      "name": "03 登录｜正确验证码登录成功并保存 token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('登录成功 code=1', () => pm.expect(body.code).to.eql(1));",
+              "pm.test('返回 token/user/roles/perms', () => {",
+              "  pm.expect(body.data).to.have.property('token');",
+              "  pm.expect(body.data).to.have.property('user');",
+              "  pm.expect(body.data).to.have.property('roles');",
+              "  pm.expect(body.data).to.have.property('perms');",
+              "});",
+              "const t = (body.data && body.data.token) || '';",
+              "pm.collectionVariables.set('token', t);",
+              "pm.collectionVariables.set('oldToken', t);",
+              "console.log('token =', t.slice(0, 20) + '...');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"2024110640\",\n  \"password\": \"123456\",\n  \"captchaKey\": \"{{captchaKey}}\",\n  \"captchaCode\": \"{{captchaCode}}\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/api/v1/user/login"
+      }
+    },
+    {
+      "name": "04 鉴权｜带 token 查当前用户权限",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('返回权限码数组', () => pm.expect(body.data).to.be.an('array'));",
+              "pm.test('管理员含 goods:audit', () => pm.expect(body.data).to.include('goods:audit'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/v1/user/permissions"
+      }
+    },
+    {
+      "name": "05 鉴权｜菜单不为空（动态路由用）",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('菜单数组非空（为空说明 sys_permission 没有 MENU 类型数据）', () => {",
+              "  pm.expect(body.data).to.be.an('array');",
+              "  pm.expect(body.data.length).to.be.above(0);",
+              "});",
+              "if (body.data && body.data.length) {",
+              "  pm.test('菜单项含 path/title', () => {",
+              "    pm.expect(body.data[0]).to.have.property('path');",
+              "    pm.expect(body.data[0]).to.have.property('title');",
+              "  });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/v1/user/menus"
+      }
+    },
+    {
+      "name": "06 越权｜普通用户调管理端接口应 403",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.test('code=403（或 HTTP 403）', () => {",
+              "  const code = body.code !== undefined ? body.code : pm.response.code;",
+              "  pm.expect(code).to.eql(403);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
+        "url": "{{baseUrl}}/api/v1/admin/users"
+      }
+    },
+    {
+      "name": "07 退出｜调 logout",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('退出成功', () => pm.expect(pm.response.json().code).to.eql(1));",
+              "pm.collectionVariables.set('oldToken', pm.collectionVariables.get('token'));",
+              "pm.collectionVariables.set('token', '');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{oldToken}}" }],
+        "url": "{{baseUrl}}/api/v1/auth/logout"
+      }
+    },
+    {
+      "name": "08 退出黑名单｜旧 token 再访问应 401",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.test('旧 token 立即失效（401）', () => {",
+              "  const code = body.code !== undefined ? body.code : pm.response.code;",
+              "  pm.expect(code).to.eql(401);",
+              "});",
+              "pm.test('提示未登录', () => pm.expect(body.msg).to.be.a('string'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{oldToken}}" }],
+        "url": "{{baseUrl}}/api/v1/user/permissions"
+      }
+    },
+    {
+      "name": "09 限流｜同一手机号 60 秒内第 6 次登录被限",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.test('被限流（提示含“频繁/稍后/限制”）', () => {",
+              "  pm.expect(body.code).to.not.eql(1);",
+              "  pm.expect(body.msg).to.match(/频繁|稍后|限制|过多/);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{phone}}\",\n  \"password\": \"wrong-password\",\n  \"captchaKey\": \"{{captchaKey}}\",\n  \"captchaCode\": \"{{captchaCode}}\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/api/v1/user/login"
+      }
+    },
+    {
+      "name": "10 缓存命中｜连续两次查分类树，第二次走缓存",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('返回分类数据', () => pm.expect(body.data).to.exist);",
+              "pm.test('响应耗时记录（第二次应明显更快）', () => {",
+              "  console.log('本次耗时(ms):', pm.response.responseTime);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/category/list"
+      }
+    },
+    {
+      "name": "11 缓存穿透｜50 次查不存在的 id（配合 Com_select 对比）",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('不存在商品给出明确业务失败，而不是 500 裸抛', () => {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body.code).to.not.eql(1);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/goods/999999"
+      }
+    }
+  ]
+}

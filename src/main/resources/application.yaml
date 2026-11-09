@@ -20,7 +20,8 @@ spring:
   data:
     redis:
       host: localhost
-      port: 6379
+      # 本机 6379 被火把节项目的 huobajie-redis 占用，campus-redis 映射在 6380
+      port: 6380
       database: 0
       timeout: 3000ms
 

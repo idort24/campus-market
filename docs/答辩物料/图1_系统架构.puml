@@ -1,0 +1,49 @@
+@startuml
+title campus-market 校园二手集市 系统架构
+left to right direction
+scale 3
+
+skinparam shadowing false
+skinparam defaultFontName "Microsoft YaHei"
+skinparam componentStyle rectangle
+skinparam arrowColor #4A6FA5
+skinparam packageBackgroundColor #FAFBFC
+skinparam packageBorderColor #B9C4CE
+skinparam componentBackgroundColor #DCE6F2
+skinparam componentBorderColor #4A6FA5
+skinparam databaseBackgroundColor #E8EFE6
+skinparam databaseBorderColor #6B8E6B
+
+package "客户端" {
+  component "Vue 3 + Element Plus\nbase = /campus-market/\n开发端口 5173" as FE
+}
+
+package "接入层" {
+  component "Nginx : 80\n静态托管 /campus-market/\n反向代理 /api → 8090" as NG
+}
+
+package "应用层  Spring Boot 3.3.5 : 8090" {
+  component "Controller\nAuth · Goods · Order · RBAC" as C
+  component "AuthInterceptor\nJWT 校验 · 黑名单 · 权限码" as I
+  component "Service" as S
+  component "Mapper\nMyBatis-Plus" as M
+}
+
+package "缓存层" {
+  component "Redis 7  容器 campus-redis\n宿主 6380 → 容器 6379\n512MB · allkeys-lru · AOF" as R
+}
+
+package "数据层" {
+  database "MySQL 8\ncampus_market : 3307\n业务表 + RBAC 四表" as DB
+  component "本地文件存储\nfile-storage" as FS
+}
+
+FE --> NG : 页面与接口请求
+NG --> C : /api/v1/**
+C --> I : 先拦截鉴权
+I --> S : 放行后调用
+S --> M : 业务查询
+S --> R : 验证码·黑名单·限流·字典·榜单
+M --> DB : SQL
+S --> FS : 分片读写
+@enduml
