@@ -16,6 +16,7 @@
 | 业务失败 | HTTP 200 + `code = 500` |
 | 鉴权头 | `Authorization: Bearer <token>` |
 | token 有效期 | 2 小时 |
+| 异常处理 | 全局 `@RestControllerAdvice`：参数/格式错误转 400，其余转 500，堆栈只写日志 |
 
 统一返回结构：
 
@@ -48,7 +49,7 @@ POST /api/v1/auth/captcha
     "imageBase64": "data:image/png;base64,iVBORw0KGgo...",
     "expireIn": 60
   }
-  }
+}
 ```
 
 说明：
@@ -94,7 +95,7 @@ POST /api/v1/user/login
       "nickName": "马智贤",
       "avatar": null,
       "userType": 9,
-      "accountStatus": "ACTIVE",
+      "accountStatus": "NORMAL",
       "roleCode": "ADMIN",
       "perms": ["user:manage", "goods:audit"]
     },
@@ -110,6 +111,11 @@ POST /api/v1/user/login
 |---|---|
 | 验证码错 / 过期 | `code: 400`，`msg: "验证码错误或已失效，请刷新后重试"` |
 | 账号或密码错 | `code: 500`，`msg: "账号或密码错误"`（两种错误统一文案，防账号枚举） |
+| 账号被禁用 | `code: 403`，`msg: "账号状态异常（BANNED），请联系管理员"` |
+
+登录成功后的副作用：
+- 校验 `sys_user.account_status`，**只有 `NORMAL` 允许登录**；状态校验放在密码校验之后，避免通过返回信息探测账号状态。
+- 写入 `last_login_time`（`LocalDateTime.now()`），后台用户列表的"最后登录"依赖该字段。
 
 前端处理要点：
 - `token` 存 `localStorage.setItem('token', res.token)`；
@@ -173,6 +179,38 @@ Authorization: Bearer <token>
 - 之后用同一个 token 请求任何受保护接口都会返回 401。
 
 前端要点：**必须先调该接口成功，再清本地 `token` / `userInfo`**；只清本地等于没退出。
+
+---
+
+### 4b. 忘记密码 / 重置密码（无需登录）
+
+```
+POST /api/v1/auth/password/reset
+```
+
+请求体：
+
+```json
+{ "phone": "13800138000", "captchaKey": "xxx", "captchaCode": "8", "newPassword": "reset123" }
+```
+
+返回：`{"code":1,"msg":"密码重置成功，请用新密码登录","data":null}`
+
+校验顺序与错误码：
+
+| 场景 | code | msg |
+|---|---|---|
+| 手机号为空 | 400 | 请输入手机号 |
+| 手机号格式不对 | 400 | 请输入正确的手机号 |
+| 新密码少于 6 位 | 400 | 新密码至少 6 位 |
+| 验证码错/过期/重复使用 | 400 | 验证码错误或已失效，请刷新后重试 |
+| 手机号未注册 | 400 | 该手机号未注册 |
+
+说明：
+- 项目暂无短信通道，当前用**图形验证码**承担"确认本人操作"的作用，接口参数结构不变；
+- 后续接入短信服务，只需把 `CaptchaService.verify()` 换成短信校验；
+- 重置成功后**不会自动登录**，前端引导回登录页；
+- 该路径已在 `WebConfig` 放行，不需要 token。
 
 ---
 
@@ -313,3 +351,5 @@ dict:manage
 | 白名单配置 | `config/WebConfig.java` |
 | 缓存抽象层 | `cache/CacheStore.java`、`cache/InMemoryCacheStore.java` |
 | 缓存键常量 | `common/CacheKeys.java` |
+| 全局异常处理 | `common/GlobalExceptionHandler.java` |
+| 密码加密 / JWT 工具 | `utils/PasswordUtil.java`、`utils/JwtUtil.java` |
