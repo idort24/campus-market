@@ -2,17 +2,40 @@ package com.campusmarket.utils;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 @Component
 public class JwtUtil {
-    private static final String SECRET = "abcdefghijklmnopqrstuvwxyz123456abcdefghijklmnopqrstuvwxyz123456";
-    private static final long EXPIRATION = 2 * 60 * 60 * 1000L; // 2小时
 
-    private static final SecretKey KEY = Keys.hmacShaKeyFor(SECRET.getBytes());
+    /**
+     * 密钥与有效期来自 application.yaml 的 jwt.secret / jwt.expire-hours，
+     * 不再硬编码在代码里：换密钥只需改配置（或用环境变量 JWT_SECRET 覆盖），不用重新编译。
+     */
+    private static String SECRET;
+    private static long EXPIRATION;
+    private static SecretKey KEY;
+
+    @Value("${jwt.secret}")
+    private String secretValue;
+
+    @Value("${jwt.expire-hours:2}")
+    private long expireHours;
+
+    @PostConstruct
+    public void init() {
+        if (secretValue == null || secretValue.length() < 32) {
+            throw new IllegalStateException("jwt.secret 长度不足 32 个字符，HS256 无法安全签名");
+        }
+        SECRET = secretValue;
+        EXPIRATION = expireHours * 60 * 60 * 1000L;
+        KEY = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
+    }
 
     public static String generateToken(Long userId) {
         Date now = new Date();
