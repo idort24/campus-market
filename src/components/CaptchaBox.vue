@@ -20,13 +20,25 @@ const image = ref('')
 const loading = ref(false)
 const failed = ref(false)
 
+/**
+ * 后端 imageBase64 可能是纯 base64（没有 data: 前缀），
+ * 直接塞进 img src 会加载失败，这里做一次兼容。
+ * 后端用 ImageIO 写 PNG，所以裸串一律按 png 处理。
+ */
+function toImageSrc(src) {
+  if (!src) return ''
+  const s = String(src).trim()
+  if (s.startsWith('data:') || s.startsWith('http') || s.startsWith('/') || s.startsWith('blob:')) return s
+  return `data:image/png;base64,${s}`
+}
+
 async function refresh() {
   if (loading.value) return
   loading.value = true
   failed.value = false
   try {
     const res = await getCaptcha()
-    image.value = res.imageBase64
+    image.value = toImageSrc(res.imageBase64)
     emit('update:modelValue', res.captchaKey)
     emit('change', { key: res.captchaKey, image: res.imageBase64 })
   } catch {

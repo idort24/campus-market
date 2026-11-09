@@ -29,11 +29,14 @@ export function register(payload) {
 
 /**
  * 3. 获取图形验证码
+ * ------------------------------------------------------------
+ * 后端（马智贤）：POST /api/v1/auth/captcha，返回 {captchaKey, imageBase64}
+ * 注意是 POST 不是 GET，方法不一致会直接 405。
  * @returns {Promise<{captchaKey:string, imageBase64:string}>}
  */
 export function getCaptcha() {
   if (USE_MOCK) return authMock.getCaptcha()
-  return http.get('/auth/captcha')
+  return http.post('/auth/captcha')
 }
 
 /**

@@ -17,6 +17,13 @@ http.interceptors.request.use((config) => {
 // 防止 401 连续弹多个框 / 连续跳转
 let redirecting = false
 
+// 认证类接口自身的 401（账号密码错、验证码错）不能触发"跳登录页"，
+// 否则用户在登录页输错密码会被立刻踢出去，看起来像页面崩了。
+const AUTH_APIS = ['/user/login', '/user/register', '/auth/captcha', '/auth/password/reset', '/auth/logout']
+function isAuthApi(url = '') {
+  return AUTH_APIS.some((p) => String(url).includes(p))
+}
+
 function goLoginWithRedirect() {
   if (redirecting) return
   redirecting = true
@@ -40,6 +47,11 @@ http.interceptors.response.use(
     if (code === 1 || code === 200) return data
 
     if (code === 401) {
+      // 登录/注册/验证码接口自身的 401：只提示，不跳转
+      if (isAuthApi(res.config?.url)) {
+        ElMessage.error(msg || '登录失败')
+        return Promise.reject(new Error(msg || '登录失败'))
+      }
       ElMessage.error('登录已失效，请重新登录')
       goLoginWithRedirect()
       return Promise.reject(new Error(msg || '未登录'))
@@ -58,6 +70,10 @@ http.interceptors.response.use(
     const msg = err?.response?.data?.msg
 
     if (status === 401) {
+      if (isAuthApi(err.config?.url)) {
+        ElMessage.error(msg || '登录失败')
+        return Promise.reject(new Error(msg || '登录失败'))
+      }
       ElMessage.error(msg || '登录已失效，请重新登录')
       goLoginWithRedirect()
       return Promise.reject(new Error(msg || '未登录'))
