@@ -1,6 +1,7 @@
 package com.campusmarket.controller;
 
 import com.campusmarket.common.R;
+import com.campusmarket.cache.CacheStore;
 import com.campusmarket.entity.SysUser;
 import com.campusmarket.service.CaptchaService;
 import com.campusmarket.service.RbacService;
@@ -36,6 +37,9 @@ public class SysUserController {
     @Autowired
     private CaptchaService captchaService;
 
+    @Autowired
+    private CacheStore cacheStore;
+
     /**
      * 是否强制校验图形验证码
      * 联调期前端还没做完验证码时可以临时关掉：auth.captcha.enabled=false
@@ -63,25 +67,45 @@ public class SysUserController {
         }
         String password = param.get("password");
 
-        // 图形验证码校验（反爬第一道闸）：一次性使用，校验完即失效
+        boolean smsLogin = false;
+        // 验证码校验（反爬第一道闸）：一次性使用，校验完即失效
         if (captchaEnabled) {
             String captchaKey = param.get("captchaKey");
             String captchaCode = param.get("captchaCode");
-            if (!captchaService.verify(captchaKey, captchaCode)) {
-                return R.error(400, "验证码错误或已失效，请刷新后重试");
+            // 短信登录分支：captchaKey = sms:{手机号}，走短信验证码而不是图形验证码
+            if (captchaKey != null && captchaKey.startsWith("sms:")) {
+                String expected = cacheStore.get(captchaKey);
+                if (expected == null || !expected.equals(captchaCode)) {
+                    return R.error(400, "短信验证码错误或已过期");
+                }
+                cacheStore.delete(captchaKey);
+                smsLogin = true;
+            } else {
+                if (!captchaService.verify(captchaKey, captchaCode)) {
+                    return R.error(400, "验证码错误或已失效，请刷新后重试");
+                }
             }
         }
 
-        SysUser user = sysUserService.lambdaQuery()
-                .eq(SysUser::getStudentNo, account)
-                .one();
+        SysUser user;
+        if (smsLogin) {
+            // 短信登录：按手机号找账号，账号就是手机号
+            user = sysUserService.lambdaQuery()
+                    .eq(SysUser::getPhone, account)
+                    .one();
+        } else {
+            // 密码登录：按学号找账号
+            user = sysUserService.lambdaQuery()
+                    .eq(SysUser::getStudentNo, account)
+                    .one();
+        }
 
         // 统一提示文案，避免通过错误信息判断"该学号是否已注册"（防账号枚举）
         if(user == null){
             return R.fail("账号或密码错误");
         }
-        // ✅ 用你 PasswordUtil 的 matches 校验
-        if (!PasswordUtil.matches(password, user.getPassword())) {
+        // 密码登录才校验 BCrypt；短信登录凭验证码即视为本人
+        if (!smsLogin && !PasswordUtil.matches(password, user.getPassword())) {
             return R.fail("账号或密码错误");
         }
 

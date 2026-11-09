@@ -356,6 +356,13 @@ dict:manage
 | 全局异常处理 | `common/GlobalExceptionHandler.java` |
 | 字典缓存预热 | `config/DictWarmupRunner.java` |
 
+## 短信验证码登录（2026-11-09 补，开发期模拟通道）
+
+- 发短信：`POST /api/v1/auth/sms/code`，body `{phone}`，返回 `{captchaKey, expireIn, devCode}`。开发期把验证码直接打在控制台 + 返回 `devCode`，接云短信时只改这一层。
+- 登录：`POST /api/v1/user/login`，短信分支传 `{username: 手机号, captchaKey: "sms:{手机号}", captchaCode: 6位码}`，不再传密码；账号按手机号查。
+- 验证码一次性，TTL 5 分钟；重放/错码均 400。
+- 已放行 `/api/v1/auth/sms/code`，不需要 token。
+
 ## 商品上下架接口（2026-11-09 补）
 
 - `PUT /api/v1/goods/{id}/status?status=ON_SHELF|OFF_SHELF`

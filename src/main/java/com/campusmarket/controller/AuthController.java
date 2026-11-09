@@ -53,6 +53,33 @@ public class AuthController {
     }
 
     /**
+     * 开发期模拟短信通道 POST /api/v1/auth/sms/code
+     *
+     * 请求体 { phone }，返回 { captchaKey, expireIn, devCode }。
+     * 开发期没有真实短信网关，验证码直接打在控制台 + 放进 data.devCode，
+     * 联调时前端从输入框读，答辩时可解释为"接入云短信网关时只改这一层"。
+     * 缓存 5 分钟，一次性使用。
+     */
+    @PostMapping("/sms/code")
+    public R<Map<String, Object>> smsCode(@RequestBody Map<String, String> param) {
+        String phone = param.get("phone");
+        if (phone == null || !phone.matches("^1[3-9]\\d{9}$")) {
+            return R.error(400, "请输入正确的手机号");
+        }
+        // 6 位随机数字，前导 0 补全
+        String code = String.format("%06d", new java.util.Random().nextInt(1_000_000));
+        String key = "sms:" + phone;
+        cacheStore.set(key, code, 300);
+        System.out.println("[SMS-CODE] 开发期短信验证码 phone=" + phone + " code=" + code);
+
+        java.util.Map<String, Object> data = new java.util.HashMap<>();
+        data.put("captchaKey", key);
+        data.put("expireIn", 300);
+        data.put("devCode", code);
+        return R.ok(data);
+    }
+
+    /**
      * 退出登录 POST /api/v1/auth/logout
      *
      * JWT 是无状态的，仅删除前端本地 token 并不能让原 token 失效，
