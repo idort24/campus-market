@@ -337,6 +337,8 @@ dict:manage
 
 缓存键统一定义在 `com.campusmarket.common.CacheKeys`，不要在业务里硬编码字符串。
 
+字典缓存已落地：`GET /dict/data/list?dictType=xxx` 走 Cache Aside，启动时 `DictWarmupRunner` 把 4 个字典类型（`goods_status / audit_status / goods_quality / order_status`）15 条数据全部预热进内存缓存，运行期不再查库；后续加写接口时"先写库、再删缓存"。
+
 ---
 
 ## 六、后端代码位置索引
@@ -352,6 +354,7 @@ dict:manage
 | 缓存抽象层 | `cache/CacheStore.java`、`cache/InMemoryCacheStore.java` |
 | 缓存键常量 | `common/CacheKeys.java` |
 | 全局异常处理 | `common/GlobalExceptionHandler.java` |
+| 字典缓存预热 | `config/DictWarmupRunner.java` |
 | 密码加密 / JWT 工具 | `utils/PasswordUtil.java`、`utils/JwtUtil.java` |
 
 ---
