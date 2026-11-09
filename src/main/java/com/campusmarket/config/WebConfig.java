@@ -24,8 +24,9 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/v1/auth/captcha",
                         "/api/v1/auth/sms/code",
                         "/api/v1/auth/password/reset",
+                        // 只放行公开列表；goods/{id}、goods/my、goods/status、DELETE 等都必须登录，
+                        // 之前用 /goods/* 通配导致匿名能调我的发布/删改商品，已收回
                         "/api/v1/goods/list",
-                        "/api/v1/goods/*",
                         "/api/v1/category/list",
                         "/api/v1/category/children/*",
                         "/api/v1/evaluation/toUser/*",

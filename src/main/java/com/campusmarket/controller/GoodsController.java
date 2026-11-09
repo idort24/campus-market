@@ -94,7 +94,12 @@ public class GoodsController {
             ps = 10L;
         }
         Page<Goods> pageObj = new Page<>(pn, ps);
-        IPage<Goods> pageData = goodsService.page(pageObj);
+        // 公开列表只对外展示"审核通过 + 上架中"的商品；
+        // 待审核/已驳回/已售出/下架商品不匿名暴露，后台审核走带权限的接口
+        IPage<Goods> pageData = goodsService.lambdaQuery()
+                .eq(Goods::getAuditStatus, "PASS")
+                .eq(Goods::getGoodsStatus, "ON_SHELF")
+                .page(pageObj);
         return R.ok(pageData);
     }
 
