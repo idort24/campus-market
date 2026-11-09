@@ -11,7 +11,7 @@ export default defineConfig({
       '/api': {
         // 后端实际端口 8090，跑在后端同学电脑上
         // target 用后端同学的局域网 IP（当前手机热点网段 172.20.10.2）
-        target: 'http://172.20.10.2:8090',
+        target: 'http://localhost:8090',
         changeOrigin: true
       }
     }

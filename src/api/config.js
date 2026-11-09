@@ -5,4 +5,4 @@
 // USE_MOCK = false ：页面走真实后端接口（Spring Boot）
 // 后端接口就绪后，把这里改成 false 即可全部切换。
 // ============================================================
-export const USE_MOCK = true
+export const USE_MOCK = false
