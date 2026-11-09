@@ -75,12 +75,11 @@ export function getMenus() {
 }
 
 /**
- * 发送短信验证码（开发期模拟通道，马智贤 2026-11 提供）
+ * 发送短信验证码（开发期模拟通道，马智贤 2026-11 提供，已上线 8e948d8）
  * ------------------------------------------------------------
- * 后端：POST /api/v1/auth/sms/code  {phone}
- *   生成 6 位码，缓存 5 分钟，打到后端控制台日志里（演示时看控制台）
- * 注意：此接口只在 captcha.enabled=true 的登录流程里作为「短信分支」使用，
- *       登录时 captchaKey 传 `sms:{手机号}`，就不走图形码了。
+ * 后端：POST /api/v1/auth/sms/code  body {phone}
+ * 返回：{ code:1, data:{ captchaKey:"sms:13800000008", expireIn:300, devCode:"968871" } }
+ * 开发期验证码直接在 devCode 里给出（后端控制台也打 [SMS-CODE] 日志），不用等真实短信。
  */
 export function sendSmsCode(phone) {
   if (USE_MOCK) return authMock.sendSmsCode(phone)
@@ -90,9 +89,10 @@ export function sendSmsCode(phone) {
 /**
  * 短信验证码登录（登录的短信分支）
  * ------------------------------------------------------------
- * 仍走 POST /user/login，但 captchaKey 传 `sms:{手机号}`，后端据此走短信校验，
- * 不再校验图形码；password 不参与（手机号即身份）。
- * 待联调确认：若后端仍要求 password 字段非空，这里补一个占位值即可。
+ * 仍走 POST /user/login，但 captchaKey 传 `sms:{手机号}`，后端据此按手机号查账号、校验短信码。
+ * 马智贤确认：
+ *   - password 传空字符串不会被拦（短信分支里 password 不参与校验）
+ *   - 短信码后端只读 captchaCode，smsCode 字段不认，前端不要再传
  * @param {{phone:string, smsCode:string}} payload
  */
 export function loginBySms({ phone, smsCode }) {
@@ -101,7 +101,6 @@ export function loginBySms({ phone, smsCode }) {
     password: '',
     captchaKey: `sms:${phone}`,
     captchaCode: smsCode,
-    smsCode,
   }
   if (USE_MOCK) return authMock.login(payload)
   return http.post('/user/login', payload)

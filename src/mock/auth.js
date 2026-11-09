@@ -37,7 +37,7 @@ const BUILTIN_USERS = [
   {
     id: 1,
     studentNo: '2024110640',
-    phone: '13800000000',
+    phone: '13800000008',
     nickName: '管理员',
     password: '123456',
     roleCode: 'ADMIN',
@@ -46,7 +46,7 @@ const BUILTIN_USERS = [
   },
   {
     id: 2,
-    studentNo: '2024110601',
+    studentNo: '2024777777',
     phone: '13900000000',
     nickName: '张爱阳',
     password: '123456',

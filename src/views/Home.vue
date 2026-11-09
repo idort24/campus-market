@@ -1,17 +1,27 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import NavBar from '../components/NavBar.vue'
 import { ROOT_CATEGORIES } from '../data/categories.js'
-import { productList } from '../data/products.js'
+import { fetchProducts } from '../api/product.js'
 
 const router = useRouter()
 const search = ref('')
 
-// 首页"为你推荐"取商品列表前 4 条（真实数据源，不再在模板里写死卡片）
-const recommend = computed(() => productList.value.slice(0, 4))
+// 首页"为你推荐"走产品接口层：USE_MOCK=true 取本地数据，切 false 后取后端 /goods
+// 注意不要直接 import data/products.js，那样切了开关首页也不会变
+const recommend = ref([])
 const REC_BG = ['#dbeafe', '#dcfce7', '#fef3c7', '#fce7f3']
+
+async function loadRecommend() {
+  try {
+    const list = await fetchProducts({ pageSize: 4 })
+    recommend.value = (list || []).slice(0, 4)
+  } catch (e) {
+    recommend.value = []
+  }
+}
 
 function doSearch() {
   router.push({ path: '/product', query: search.value ? { keyword: search.value } : {} })
@@ -19,6 +29,7 @@ function doSearch() {
 
 // 权限被拦截后回首页时给一次提示（守卫通过 sessionStorage 传递）
 onMounted(() => {
+  loadRecommend()
   const denied = sessionStorage.getItem('cm_denied')
   if (denied) {
     sessionStorage.removeItem('cm_denied')

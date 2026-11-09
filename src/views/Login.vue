@@ -52,8 +52,10 @@ async function sendCode() {
   try {
     const res = await sendSmsCode(smsForm.value.phone)
     startCountdown()
-    if (res?.debugCode) {
-      ElMessage.success(`验证码已发送（演示环境验证码：${res.debugCode}）`)
+    // 真后端字段是 devCode，Mock 是 debugCode，两个都兼容
+    const dev = res?.devCode ?? res?.debugCode
+    if (dev) {
+      ElMessage.success(`验证码已发送（开发环境验证码：${dev}）`)
     } else {
       ElMessage.success('验证码已发送')
     }
@@ -240,7 +242,7 @@ const titleText = computed(() => {
             {{ loading ? '登录中…' : '登 录' }}
           </button>
 
-          <p class="bottom-tip">演示账号：2024110601（手机 13900000000）/ 开发期验证码会直接提示在页面上</p>
+          <p class="bottom-tip">演示手机号：13800000008（管理员）/ 开发期验证码会直接提示在页面上</p>
         </form>
 
         <!-- ========== 扫码登录（占位） ========== -->
@@ -262,7 +264,7 @@ const titleText = computed(() => {
         <div class="demo-tip">
           <p><strong>测试账号</strong></p>
           <p>管理员：2024110640 / 123456</p>
-          <p>普通学生：2024110601 / 123456</p>
+          <p>普通学生：2024777777 / 123456</p>
         </div>
 
         <router-link to="/" class="back-home">← 返回首页</router-link>
