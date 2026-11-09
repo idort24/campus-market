@@ -1,8 +1,14 @@
 // ============================================================
-// 收藏接口层（对齐 goods_collect 表）
+// 收藏接口层（后端对应 goods_collect 表 / goodsCollect 控制器）
 // ------------------------------------------------------------
-// 后端字段统一驼峰：id、userId、goodsId、createTime
-// Mock 分支返回的商品对象也走 normalizeGoods，保证页面字段一致
+// 路径已按马智贤回复核对（2026-11 联调口径）：
+//   我的收藏      GET    /api/v1/goodsCollect/my
+//   取消收藏      DELETE /api/v1/goodsCollect/{goodsId}
+//   是否已收藏    GET    /api/v1/goodsCollect/has/{goodsId}
+//   添加收藏      POST   /api/v1/goodsCollect/add  ← 待马智贤最终确认
+//
+// 注意：不是 /favorites，原来写的那套路径后端没有。
+// 后端字段驼峰：id、userId、goodsId、createTime
 // ============================================================
 import http from './http'
 import { USE_MOCK } from './config'
@@ -11,15 +17,16 @@ import { normalizeGoods } from './product.js'
 
 const delay = (ms = 150) => new Promise((r) => setTimeout(r, ms))
 
-// 我的收藏列表（分页参数预留）
+// 我的收藏列表
 export async function getFavorites(params = {}) {
   if (USE_MOCK) {
     await delay()
     const list = productList.value.filter((p) => [1, 4].includes(p.id))
     return list.map(normalizeGoods)
   }
-  const res = await http.get('/favorites', { params })
+  const res = await http.get('/goodsCollect/my', { params })
   const list = Array.isArray(res) ? res : (res?.records || [])
+  // 后端可能直接返回 goodsCollect 记录（含 goodsId），也可能带 goods 子对象
   return list.map((it) => normalizeGoods(it.goods || it))
 }
 
@@ -29,14 +36,25 @@ export async function addFavorite(goodsId) {
     await delay(100)
     return { goodsId }
   }
-  return http.post('/favorites', { goodsId })
+  return http.post('/goodsCollect/add', { goodsId })
 }
 
-// 取消收藏（后端按 goodsId 取消更稳，收藏记录 id 前端拿不到时也能用）
+// 取消收藏（后端按 goodsId 取消，不按收藏记录 id）
 export async function removeFavorite(goodsId) {
   if (USE_MOCK) {
     await delay(100)
     return { goodsId }
   }
-  return http.delete(`/favorites/${goodsId}`)
+  return http.delete(`/goodsCollect/${goodsId}`)
+}
+
+// 查询自己是否已收藏某商品（详情页判断收藏按钮状态用）
+export async function hasFavorite(goodsId) {
+  if (USE_MOCK) {
+    await delay(80)
+    return [1, 4].includes(Number(goodsId))
+  }
+  const res = await http.get(`/goodsCollect/has/${goodsId}`)
+  // 后端可能返回 true/false，也可能返回 {has: true}
+  return typeof res === 'boolean' ? res : !!(res?.has ?? res?.data)
 }

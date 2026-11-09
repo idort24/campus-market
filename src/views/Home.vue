@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import NavBar from '../components/NavBar.vue'
+import { ROOT_CATEGORIES } from '../data/categories.js'
 
 const router = useRouter()
 const search = ref('')
@@ -48,26 +49,13 @@ onMounted(() => {
     <section class="section">
       <div class="section-head"><h2>热门分类</h2></div>
       <div class="cat-grid">
-        <div class="cat-item" @click="router.push('/categories')">
-          <div class="cat-icon">📱</div><span>数码产品</span>
-        </div>
-        <div class="cat-item" @click="router.push('/categories')">
-          <div class="cat-icon">📚</div><span>教材书籍</span>
-        </div>
-        <div class="cat-item" @click="router.push('/categories')">
-          <div class="cat-icon">🛋️</div><span>生活用品</span>
-        </div>
-        <div class="cat-item" @click="router.push('/categories')">
-          <div class="cat-icon">⚽</div><span>运动户外</span>
-        </div>
-        <div class="cat-item" @click="router.push('/categories')">
-          <div class="cat-icon">🎹</div><span>乐器爱好</span>
-        </div>
-        <div class="cat-item" @click="router.push('/categories')">
-          <div class="cat-icon">🚲</div><span>代步工具</span>
-        </div>
-        <div class="cat-item" @click="router.push('/categories')">
-          <div class="cat-icon">👗</div><span>服饰鞋包</span>
+        <div
+          v-for="c in ROOT_CATEGORIES"
+          :key="c.id"
+          class="cat-item"
+          @click="router.push({ path: '/categories', query: { id: c.id } })"
+        >
+          <div class="cat-icon">{{ c.icon }}</div><span>{{ c.name }}</span>
         </div>
         <div class="cat-item" @click="router.push('/categories')">
           <div class="cat-icon">➕</div><span>全部分类</span>

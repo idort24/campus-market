@@ -21,7 +21,7 @@ async function load() {
 }
 
 function todo(action, row) {
-  ElMessage.info(`${action}「${row?.name || '分类'}」功能待后端分类接口就绪`)
+  ElMessage.info(`${action}「${row?.categoryName || '分类'}」功能待后端分类接口就绪`)
 }
 
 onMounted(load)
@@ -36,7 +36,7 @@ onMounted(load)
 
     <el-card v-loading="loading">
       <el-table :data="tree" row-key="id" border default-expand-all>
-        <el-table-column prop="name" label="分类名称" />
+        <el-table-column prop="categoryName" label="分类名称" />
         <el-table-column label="子分类数" width="120">
           <template #default="{ row }">{{ row.children?.length || 0 }}</template>
         </el-table-column>

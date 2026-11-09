@@ -2,7 +2,7 @@
 import NavBar from '../components/NavBar.vue'
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { mockApi } from '../mock/index.js'
+import { fetchMyGoods } from '../api/product.js'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const router = useRouter()
@@ -14,8 +14,11 @@ const isAdmin = computed(() => userInfo.value?.roleCode === 'ADMIN')
 async function load() {
   loading.value = true
   try {
-    const all = await mockApi.getGoods()
-    list.value = all.slice(0, 6).map(g => ({ ...g, status: 'ON_SHELF' }))
+    // 后端：GET /api/v1/goods/my（当前登录人发布的商品）
+    const all = await fetchMyGoods()
+    list.value = all.map(g => ({ ...g, status: g.goodsStatus || 'ON_SHELF' }))
+  } catch (e) {
+    ElMessage.error(e.message || '加载我的发布失败')
   } finally { loading.value = false }
 }
 onMounted(load)

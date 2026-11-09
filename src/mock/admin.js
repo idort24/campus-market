@@ -4,6 +4,8 @@
 // 权限码严格对齐后端 AuthInterceptor / sys_permission：
 //   user:manage、user:status、goods:audit、report:handle、category:manage、dict:manage
 // ============================================================
+import { buildCategoryTree } from '../data/categories.js'
+
 const delay = (ms = 200) => new Promise((r) => setTimeout(r, ms))
 
 // 角色列表
@@ -98,21 +100,8 @@ export const mockReports = [
 ]
 
 // 分类树（后台管理用）
-export const mockAdminCategories = [
-  {
-    id: 1, name: '教材教辅', children: [
-      { id: 11, name: '计算机教材' },
-      { id: 12, name: '数学教材' },
-    ],
-  },
-  {
-    id: 2, name: '电子产品', children: [
-      { id: 21, name: '手机' },
-      { id: 22, name: '电脑' },
-    ],
-  },
-  { id: 3, name: '生活用品', children: [] },
-]
+// 直接复用全站唯一数据源（= 数据库 goods_category 的 9 条），字段已是驼峰 categoryName
+export const mockAdminCategories = buildCategoryTree()
 
 export const adminApi = {
   async getRoles() {

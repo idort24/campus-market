@@ -1,24 +1,49 @@
 <script setup>
 import NavBar from '../components/NavBar.vue'
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { getMessages, sendMessage } from '../api/chat.js'
 
 const route = useRoute()
 const router = useRouter()
 const userInfo = computed(() => { try { return JSON.parse(localStorage.getItem('userInfo') || '{}') } catch { return {} } })
 const isAdmin = computed(() => userInfo.value?.roleCode === 'ADMIN')
 
-const messages = ref([
-  { from: 'them', text: '你好，这个商品还在吗？' },
-  { from: 'me', text: '在的，可以面交' },
-])
+// 对方 id：路由 /chat/:userId
+const peerId = computed(() => route.params.userId || route.query.userId || '')
+const messages = ref([])
 const input = ref('')
+const loading = ref(false)
+const sending = ref(false)
 
-function send() {
-  if (!input.value.trim()) return
-  messages.value.push({ from: 'me', text: input.value })
-  input.value = ''
-  setTimeout(() => { messages.value.push({ from: 'them', text: '好的，怎么交易？' }) }, 500)
+async function load() {
+  loading.value = true
+  try {
+    // 后端：GET /api/v1/chat/messages?userId=对方id（进入会话自动把对方发的置为已读）
+    messages.value = await getMessages(peerId.value)
+  } catch (e) {
+    ElMessage.error(e.message || '加载聊天记录失败')
+  } finally {
+    loading.value = false
+  }
+}
+onMounted(load)
+
+async function send() {
+  const content = input.value.trim()
+  if (!content || sending.value) return
+  sending.value = true
+  try {
+    // 后端：POST /api/v1/chat/messages，fromUserId 由后端从 token 取
+    const msg = await sendMessage({ receiverId: peerId.value, content })
+    if (msg) messages.value.push(msg)
+    input.value = ''
+  } catch (e) {
+    ElMessage.error(e.message || '发送失败')
+  } finally {
+    sending.value = false
+  }
 }
 </script>
 
@@ -28,13 +53,21 @@ function send() {
 
     <main class="chat-container">
       <div class="chat-box">
-        <div class="chat-header">与卖家聊天（用户 #{{ route.params.userId || 1 }}）</div>
-        <div class="messages">
-          <div v-for="(m, i) in messages" :key="i" :class="['msg', m.from]">{{ m.text }}</div>
+        <div class="chat-header">与卖家聊天（用户 #{{ peerId || 1 }}）</div>
+        <div v-loading="loading" class="messages">
+          <div
+            v-for="m in messages"
+            :key="m.id"
+            :class="['msg', m.mine ? 'me' : 'them']"
+          >
+            <template v-if="m.image"><img :src="m.image" alt="图片消息" class="msg-img" /></template>
+            <template v-else>{{ m.content }}</template>
+          </div>
+          <div v-if="!loading && !messages.length" class="msg-empty">还没有聊天记录，发一条试试</div>
         </div>
         <div class="input-bar">
-          <input v-model="input" placeholder="输入消息..." @keyup.enter="send" />
-          <button class="send-btn" @click="send">发送</button>
+          <input v-model="input" placeholder="输入消息..." :disabled="sending" @keyup.enter="send" />
+          <button class="send-btn" :disabled="sending" @click="send">{{ sending ? '发送中…' : '发送' }}</button>
         </div>
       </div>
     </main>
@@ -59,6 +92,8 @@ function send() {
 .msg { max-width: 70%; padding: 10px 14px; border-radius: 14px; font-size: 14px; }
 .msg.me { align-self: flex-end; background: #2563eb; color: #fff; }
 .msg.them { align-self: flex-start; background: #f1f5f9; }
+.msg-img { max-width: 180px; border-radius: 10px; display: block; }
+.msg-empty { text-align: center; color: #94a3b8; font-size: 13px; margin: auto; }
 .input-bar { display: flex; gap: 10px; padding: 12px 16px; border-top: 1px solid #f0f0f0; }
 .input-bar input { flex: 1; border: 1px solid #e2e8f0; border-radius: 20px; padding: 8px 16px; outline: none; }
 .send-btn { border: none; background: #2563eb; color: #fff; padding: 8px 20px; border-radius: 20px; cursor: pointer; }

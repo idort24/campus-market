@@ -1,18 +1,16 @@
 <script setup>
 import NavBar from '../components/NavBar.vue'
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { getMyBuy, confirmOrder, cancelOrder } from '../api/order.js'
 
 const router = useRouter()
 const userInfo = computed(() => { try { return JSON.parse(localStorage.getItem('userInfo') || '{}') } catch { return {} } })
 const isAdmin = computed(() => userInfo.value?.roleCode === 'ADMIN')
 
-const orders = ref([
-  { id: 'ORD20240101', goods: '九成新《数据结构》', price: 25.00, seller: '张爱阳', status: 'WAIT_CONFIRM', time: '2024-01-15 14:30' },
-  { id: 'ORD20240102', goods: '高数习题集', price: 18.50, seller: '周泓颖', status: 'FINISH', time: '2024-01-10 09:15' },
-  { id: 'ORD20240103', goods: '蓝色保温杯', price: 12.00, seller: '马智贤', status: 'WAIT_TRADE', time: '2024-01-16 16:45' },
-])
+const orders = ref([])
+const loading = ref(false)
 
 const statusMap = {
   WAIT_CONFIRM: { label: '待付款', color: '#f59e0b', bg: '#fef3c7' },
@@ -21,14 +19,44 @@ const statusMap = {
   CANCEL: { label: '已取消', color: '#64748b', bg: '#f1f5f9' },
 }
 
-function pay(order) {
-  ElMessage.success(`订单 ${order.id} 支付成功`)
-  order.status = 'WAIT_TRADE'
+// 后端状态码若不在字典里（比如拼写差异），兜底成灰标签，不要让页面炸掉
+function statusStyle(s) {
+  return statusMap[s] || { label: s || '未知', color: '#64748b', bg: '#f1f5f9' }
 }
 
-function confirmDone(order) {
-  ElMessage.success('确认交易完成')
-  order.status = 'FINISH'
+async function load() {
+  loading.value = true
+  try {
+    // 后端：GET /api/v1/order/myBuy（我买的订单）
+    orders.value = await getMyBuy()
+  } catch (e) {
+    ElMessage.error(e.message || '加载订单失败')
+  } finally {
+    loading.value = false
+  }
+}
+onMounted(load)
+
+/** 后端没有 pay 接口，待付款订单只能取消（PUT /order/cancel/{id}） */
+async function pay(order) {
+  try {
+    await cancelOrder(order.id)
+    order.status = 'CANCEL'
+    ElMessage.success('订单已取消')
+  } catch (e) {
+    ElMessage.error(e.message || '取消失败')
+  }
+}
+
+/** 确认收货：PUT /api/v1/order/confirm/{id} */
+async function confirmDone(order) {
+  try {
+    await confirmOrder(order.id)
+    order.status = 'FINISH'
+    ElMessage.success('确认交易完成')
+  } catch (e) {
+    ElMessage.error(e.message || '确认失败')
+  }
 }
 </script>
 
@@ -42,12 +70,12 @@ function confirmDone(order) {
         <span class="count">共 {{ orders.length }} 笔订单</span>
       </div>
 
-      <div class="order-list">
+      <div v-loading="loading" class="order-list">
         <div v-for="order in orders" :key="order.id" class="order-card">
           <div class="order-top">
-            <span class="order-id">订单号：{{ order.id }}</span>
-            <span class="status" :style="{ color: statusMap[order.status].color, background: statusMap[order.status].bg }">
-              {{ statusMap[order.status].label }}
+            <span class="order-id">订单号：{{ order.orderNo || order.id }}</span>
+            <span class="status" :style="{ color: statusStyle(order.status).color, background: statusStyle(order.status).bg }">
+              {{ statusStyle(order.status).label }}
             </span>
           </div>
           <div class="order-body">
@@ -62,7 +90,7 @@ function confirmDone(order) {
             <div class="order-right">
               <span class="price">¥{{ order.price.toFixed(2) }}</span>
               <div class="order-actions">
-                <button v-if="order.status === 'WAIT_CONFIRM'" class="pay-btn" @click="pay(order)">去付款</button>
+                <button v-if="order.status === 'WAIT_CONFIRM'" class="pay-btn" @click="pay(order)">取消订单</button>
                 <button v-if="order.status === 'WAIT_TRADE'" class="confirm-btn" @click="confirmDone(order)">确认收货</button>
                 <button class="chat-btn" @click="router.push('/chat/1')">联系卖家</button>
               </div>

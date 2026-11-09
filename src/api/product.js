@@ -20,21 +20,12 @@ import http from './http'
 import { USE_MOCK } from './config'
 import { productList, addProductLocally } from '../data/products.js'
 import { QUALITY_MAP } from '../data/dict.js'
+import { CATEGORY_NAME_BY_ID, CATEGORY_ID_BY_NAME, iconOfCategory } from '../data/categories.js'
 
 const delay = (ms = 120) => new Promise((r) => setTimeout(r, ms))
 
-// 分类 id → 名称（与数据库 goods_category 初始数据保持一致；
-// 联调时若张爱阳那边 id 排布不同，只改这张表即可）
-export const CATEGORY_NAME_BY_ID = {
-  1: '数码产品',
-  2: '教材书籍',
-  3: '生活用品',
-  4: '运动用品',
-  5: '服饰鞋包',
-  6: '乐器爱好',
-  7: '代步工具',
-  8: '其他',
-}
+// 分类 id ↔ 名称映射统一由 data/categories.js 维护（以数据库 goods_category 为准）
+export { CATEGORY_NAME_BY_ID }
 
 function qualityToText(quality) {
   if (!quality) return '未知'
@@ -52,7 +43,7 @@ export function normalizeGoods(g = {}) {
     id: g.id ?? g.goodsId,
     name: g.title ?? g.name ?? '未命名商品',
     price: Number(g.price ?? 0),
-    category: g.category ?? CATEGORY_NAME_BY_ID[categoryId] ?? '其他',
+    category: g.category ?? CATEGORY_NAME_BY_ID[categoryId] ?? '未分类',
     categoryId,
     condition: g.condition ?? qualityToText(g.quality),
     quality: g.quality ?? null,
@@ -61,7 +52,7 @@ export function normalizeGoods(g = {}) {
     location: g.tradePlace ?? g.location ?? '同校交易',
     description: g.description ?? '',
     images: g.images ?? null,
-    icon: g.icon ?? '📦',
+    icon: g.icon ?? iconOfCategory(g.category ?? CATEGORY_NAME_BY_ID[categoryId]),
     goodsStatus: g.goodsStatus ?? g.goods_status ?? 'ON_SHELF',
     auditStatus: g.auditStatus ?? g.audit_status ?? 'PASS',
     createTime: g.createTime ?? g.create_time ?? '',
@@ -119,6 +110,21 @@ export async function fetchProductById(id) {
 }
 
 /**
+ * 我的发布列表（后端：GET /api/v1/goods/my）
+ * 后端返回当前登录人发布的商品，字段同 /goods
+ */
+export async function fetchMyGoods(params = {}) {
+  if (USE_MOCK) {
+    await delay()
+    // Mock：拿全部本地商品当"我发布的"演示
+    return productList.value.map(normalizeGoods)
+  }
+  const res = await http.get('/goods/my', { params })
+  const list = Array.isArray(res) ? res : (res?.records || [])
+  return list.map(normalizeGoods)
+}
+
+/**
  * 发布新商品
  * 前端表单 → 后端 goods 字段（驼峰）
  */
@@ -128,10 +134,12 @@ export async function createProduct(form) {
     return addProductLocally(form)
   }
   // 真实后端：POST /api/v1/goods
+  // 表单里给的是中文分类名，这里转成后端要的 categoryId
+  const categoryId = form.categoryId ?? CATEGORY_ID_BY_NAME[form.category] ?? null
   const payload = {
     title: form.name,
     price: Number(form.price),
-    categoryId: form.categoryId ?? null,
+    categoryId,
     description: form.description ?? '',
     quality: form.quality ?? '90',
     tradePlace: form.location ?? '',

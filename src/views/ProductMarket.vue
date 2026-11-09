@@ -5,13 +5,15 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { fetchProducts } from '../api/product.js'
 import { addFavorite, removeFavorite } from '../api/favorites.js'
+import { CATEGORY_OPTIONS } from '../data/categories.js'
 
 const router = useRouter()
 const products = ref([])
 const loading = ref(false)
 const searchText = ref('')
 const activeCategory = ref('全部')
-const categories = ['全部', '数码产品', '教材书籍', '生活用品', '运动用品']
+// 分类按钮统一取数据库里的一级分类（1-5），不在这里另写一份
+const categories = ['全部', ...CATEGORY_OPTIONS]
 const favoriteIds = ref(new Set([1, 4]))
 const userInfo = computed(() => { try { return JSON.parse(localStorage.getItem('userInfo') || '{}') } catch { return {} } })
 const isAdmin = computed(() => userInfo.value?.roleCode === 'ADMIN')

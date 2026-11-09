@@ -1,6 +1,10 @@
 import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vite'
 
+// 后端地址：默认本机 8090（Spring Boot 默认端口）。
+// 后端若跑在别的机器上，启动前设环境变量 VITE_BACKEND=http://192.168.x.x:8090 即可，不用改代码。
+const BACKEND = process.env.VITE_BACKEND || 'http://127.0.0.1:8090'
+
 export default defineConfig({
   plugins: [vue()],
   base: '/campus-market/',
@@ -9,9 +13,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        // 后端实际端口 8090，跑在后端同学电脑上
-        // target 用后端同学的局域网 IP（当前手机热点网段 172.20.10.2）
-        target: 'http://localhost:8090',
+        target: BACKEND,
         changeOrigin: true
       }
     }

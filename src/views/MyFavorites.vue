@@ -2,7 +2,7 @@
 import NavBar from '../components/NavBar.vue'
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { mockApi } from '../mock/index.js'
+import { getFavorites, removeFavorite } from '../api/favorites.js'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
@@ -14,15 +14,23 @@ const isAdmin = computed(() => userInfo.value?.roleCode === 'ADMIN')
 async function load() {
   loading.value = true
   try {
-    const all = await mockApi.getFavorites()
-    list.value = all.slice(0, 6)
+    // 后端：GET /api/v1/goodsCollect/my（USE_MOCK 时走本地演示数据）
+    list.value = await getFavorites()
+  } catch (e) {
+    ElMessage.error(e.message || '加载收藏失败')
   } finally { loading.value = false }
 }
 onMounted(load)
 
-function removeFav(item) {
-  list.value = list.value.filter(i => i.id !== item.id)
-  ElMessage.success('已取消收藏')
+async function removeFav(item) {
+  try {
+    // 后端按 goodsId 取消收藏：DELETE /api/v1/goodsCollect/{goodsId}
+    await removeFavorite(item.id)
+    list.value = list.value.filter(i => i.id !== item.id)
+    ElMessage.success('已取消收藏')
+  } catch (e) {
+    ElMessage.error(e.message || '取消收藏失败')
+  }
 }
 </script>
 

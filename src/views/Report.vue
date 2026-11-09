@@ -3,6 +3,7 @@ import NavBar from '../components/NavBar.vue'
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { addReport } from '../api/report.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -11,12 +12,26 @@ const isAdmin = computed(() => userInfo.value?.roleCode === 'ADMIN')
 
 const reason = ref('')
 const contact = ref('')
+const submitting = ref(false)
 const reasons = ['商品描述不符', '疑似假货/盗版', '价格欺诈', '辱骂/骚扰', '其他']
 
-function submit() {
+async function submit() {
   if (!reason.value) { ElMessage.warning('请选择举报原因'); return }
-  ElMessage.success('举报已提交，管理员会尽快处理')
-  router.back()
+  submitting.value = true
+  try {
+    // 后端：POST /api/v1/report/add，入参 goodsId + reason + contact
+    await addReport({
+      goodsId: route.params.goodsId,
+      reason: reason.value,
+      contact: contact.value.trim(),
+    })
+    ElMessage.success('举报已提交，管理员会尽快处理')
+    router.back()
+  } catch (e) {
+    ElMessage.error(e.message || '提交失败，请稍后重试')
+  } finally {
+    submitting.value = false
+  }
 }
 </script>
 
@@ -40,7 +55,9 @@ function submit() {
           <input v-model="contact" placeholder="选填，方便管理员联系你" />
         </div>
         <div class="btn-row">
-          <button class="submit-btn" @click="submit">提交举报</button>
+          <button class="submit-btn" :disabled="submitting" @click="submit">
+            {{ submitting ? '提交中…' : '提交举报' }}
+          </button>
           <button class="cancel-btn" @click="router.back()">取消</button>
         </div>
       </div>

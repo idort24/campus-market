@@ -1,9 +1,11 @@
 // 统一的商品模拟数据（响应式）
 // 后续接入后端时，这个文件里的数据会被 src/api/product.js 里的真实接口替换。
 import { ref } from 'vue'
+import { CATEGORY_OPTIONS, iconOfCategory } from './categories.js'
 
 // 全部分类（发布表单和筛选按钮共用）
-export const CATEGORIES = ['数码产品', '教材书籍', '生活用品', '运动用品']
+// 分类名称以数据库 goods_category 表为准，统一从 data/categories.js 导出，不在这里另写一份
+export const CATEGORIES = CATEGORY_OPTIONS
 
 // 商品成色可选项
 export const CONDITIONS = ['全新', '几乎全新', '九成新', '八成新', '七成及以下']
@@ -25,7 +27,7 @@ export const productList = ref([
     id: 2,
     name: '蓝牙耳机',
     price: 50,
-    category: '数码产品',
+    category: '电子产品',
     icon: '🎧',
     description: '音质清晰，使用状态良好',
     condition: '九成新',
@@ -47,7 +49,7 @@ export const productList = ref([
     id: 4,
     name: '机械键盘',
     price: 80,
-    category: '数码产品',
+    category: '电子产品',
     icon: '⌨️',
     description: '手感舒适，适合学习和办公',
     condition: '九成新',
@@ -80,7 +82,7 @@ export const productList = ref([
     id: 7,
     name: '篮球',
     price: 45,
-    category: '运动用品',
+    category: '体育器材',
     icon: '🏀',
     description: '使用次数较少，适合校园运动',
     condition: '九成新',
@@ -91,7 +93,7 @@ export const productList = ref([
     id: 8,
     name: '运动水杯',
     price: 18,
-    category: '运动用品',
+    category: '体育器材',
     icon: '🥤',
     description: '大容量水杯，方便携带',
     condition: '几乎全新',
@@ -103,14 +105,6 @@ export const productList = ref([
 // 下一个可用 id（本地自增；接入后端后由后端生成）
 let nextId = 9
 
-// 根据分类选一个默认图标
-const CATEGORY_ICONS = {
-  '数码产品': '📱',
-  '教材书籍': '📚',
-  '生活用品': '🛋️',
-  '运动用品': '⚽'
-}
-
 // 新增商品（本地 mock 实现；接入后端后由 api/product.js 改成 POST）
 export function addProductLocally(form) {
   const product = {
@@ -118,7 +112,8 @@ export function addProductLocally(form) {
     name: form.name.trim(),
     price: Number(form.price),
     category: form.category,
-    icon: form.icon || CATEGORY_ICONS[form.category] || '📦',
+    // 图标统一从 data/categories.js 的 id→图标映射取，不在这里再维护一份
+    icon: form.icon || iconOfCategory(form.category),
     description: form.description.trim(),
     condition: form.condition,
     seller: form.seller?.trim() || '我（本校学生）',
