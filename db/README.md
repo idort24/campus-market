@@ -12,6 +12,7 @@
 | `02_seed.sql` | 角色、权限、字典、分类、测试账号的初始数据 | 建完表后第二个跑，只跑一轮 |
 | `03_check.sql` | 17 项自检报表 | 初始化后验收，每次改库后复核 |
 | `04_upgrade_20261109.sql` | 已有旧库的增量修复（不改表结构） | 库里已有数据、不想重建时用 |
+| `05_demo_data.sql` | 24 条演示商品 + 分类统计快照（可重复执行） | 前端关掉 mock 后页面空白时跑，灌演示数据 |
 | `_backup_before_upgrade_20261109.sql` | 升级前的完整备份 | 出问题回滚用 |
 
 > 根目录那个 `campus_market.sql` 是旧文件，**不要再用**。它的测试账号密码密文被 PowerShell 的 `$` 变量解析截断成了 32 字符（完整应为 60 字符），拿它导入后登录必然失败。原因见第四节第 3 条。
@@ -31,6 +32,9 @@
 
 # 3. 验收（输出 17 行 OK 才算成功）
 & "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" --user=root --password=你的密码 --default-character-set=utf8mb4 --table -e "source D:/files/cm/db/03_check.sql"
+
+# 4. 可选：灌演示数据（24 条商品，前端页面才有内容）
+& "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" --user=root --password=你的密码 --default-character-set=utf8mb4 --table -e "source D:/files/cm/db/05_demo_data.sql"
 ```
 
 ### 场景 B：库里已有数据，只想补齐
