@@ -129,10 +129,10 @@ public class GoodsController {
     /**
      * 商品上下架（仅自己发布的商品）
      *
-     * POST /api/v1/goods/status/{id}?status=ON_SHELF|OFF_SHELF
+     * PUT /api/v1/goods/{id}/status?status=ON_SHELF|OFF_SHELF
      * SOLD 状态由订单流程触发，这里不允许手动改。
      */
-    @PostMapping("/status/{id}")
+    @PutMapping("/{id}/status")
     public R changeStatus(@PathVariable Long id, @RequestParam String status) {
         Long userId = UserContext.getUserId();
         Goods goods = goodsService.getById(id);

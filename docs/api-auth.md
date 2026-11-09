@@ -358,7 +358,7 @@ dict:manage
 
 ## 商品上下架接口（2026-11-09 补）
 
-- `POST /api/v1/goods/status/{id}?status=ON_SHELF|OFF_SHELF`
+- `PUT /api/v1/goods/{id}/status?status=ON_SHELF|OFF_SHELF`
 - 仅本人发布的商品可操作；`SOLD` 由订单流程触发，不允许手动改。
 - 附带修了一个 schema 问题：`goods.goods_status` / `goods.audit_status` 原本是 int，与字典 String 设计不符，已 ALTER 为 `varchar(20)`（张爱阳后续同步到建表脚本）。
 | 密码加密 / JWT 工具 | `utils/PasswordUtil.java`、`utils/JwtUtil.java` |
