@@ -1,35 +1,33 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import NavBar from '../components/NavBar.vue'
+
 const router = useRouter()
 const search = ref('')
-function doSearch() { router.push('/product') }
+
+function doSearch() {
+  router.push({ path: '/product', query: search.value ? { keyword: search.value } : {} })
+}
+
+// 权限被拦截后回首页时给一次提示（守卫通过 sessionStorage 传递）
+onMounted(() => {
+  const denied = sessionStorage.getItem('cm_denied')
+  if (denied) {
+    sessionStorage.removeItem('cm_denied')
+    if (denied === 'admin') {
+      ElMessage.warning('当前账号没有管理后台访问权限')
+    } else {
+      ElMessage.warning(`当前账号缺少权限：${denied}`)
+    }
+  }
+})
 </script>
 
 <template>
   <div class="home-page">
-    <!-- 顶部导航 -->
-    <header class="navbar">
-      <div class="nav-inner">
-        <div class="logo" @click="router.push('/')">
-          <span class="logo-icon">🛍️</span>
-          <span class="logo-text">校园集市</span>
-        </div>
-        <nav class="nav-links">
-          <router-link to="/" exact-active-class="active">首页</router-link>
-          <router-link to="/product" active-class="active">商品市场</router-link>
-          <router-link to="/publish" active-class="active">发布商品</router-link>
-          <router-link to="/categories" active-class="active">分类浏览</router-link>
-          <router-link to="/ai" active-class="active">AI助手</router-link>
-          <router-link to="/profile" active-class="active">个人中心</router-link>
-          <router-link to="/admin" active-class="active">管理后台</router-link>
-        </nav>
-        <div class="nav-actions">
-          <router-link to="/publish" class="publish-btn">＋ 发布</router-link>
-          <router-link to="/profile" class="avatar-btn">👤</router-link>
-        </div>
-      </div>
-    </header>
+    <NavBar />
 
     <!-- Hero 搜索区 -->
     <section class="hero">
@@ -50,28 +48,28 @@ function doSearch() { router.push('/product') }
     <section class="section">
       <div class="section-head"><h2>热门分类</h2></div>
       <div class="cat-grid">
-        <div class="cat-item" @click="router.push('/product')">
+        <div class="cat-item" @click="router.push('/categories')">
           <div class="cat-icon">📱</div><span>数码产品</span>
         </div>
-        <div class="cat-item" @click="router.push('/product')">
+        <div class="cat-item" @click="router.push('/categories')">
           <div class="cat-icon">📚</div><span>教材书籍</span>
         </div>
-        <div class="cat-item" @click="router.push('/product')">
+        <div class="cat-item" @click="router.push('/categories')">
           <div class="cat-icon">🛋️</div><span>生活用品</span>
         </div>
-        <div class="cat-item" @click="router.push('/product')">
+        <div class="cat-item" @click="router.push('/categories')">
           <div class="cat-icon">⚽</div><span>运动户外</span>
         </div>
-        <div class="cat-item" @click="router.push('/product')">
+        <div class="cat-item" @click="router.push('/categories')">
           <div class="cat-icon">🎹</div><span>乐器爱好</span>
         </div>
-        <div class="cat-item" @click="router.push('/product')">
+        <div class="cat-item" @click="router.push('/categories')">
           <div class="cat-icon">🚲</div><span>代步工具</span>
         </div>
-        <div class="cat-item" @click="router.push('/product')">
+        <div class="cat-item" @click="router.push('/categories')">
           <div class="cat-icon">👗</div><span>服饰鞋包</span>
         </div>
-        <div class="cat-item" @click="router.push('/product')">
+        <div class="cat-item" @click="router.push('/categories')">
           <div class="cat-icon">➕</div><span>全部分类</span>
         </div>
       </div>
@@ -126,36 +124,13 @@ function doSearch() { router.push('/product') }
 <style scoped>
 .home-page { min-height: 100vh; background: #fafbfc; }
 
-/* 导航 */
-.navbar {
-  position: sticky; top: 0; z-index: 100;
-  background: rgba(255,255,255,0.92); backdrop-filter: blur(16px);
-  border-bottom: 1px solid #f0f0f0;
-}
-.nav-inner {
-  max-width: 1200px; margin: 0 auto; padding: 0 24px;
-  height: 56px; display: flex; align-items: center; justify-content: space-between;
-}
-.logo { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 18px; font-weight: 800; }
-.logo-icon { font-size: 22px; }
-.nav-links { display: flex; gap: 20px; }
-.nav-links a { color: #64748b; font-size: 14px; transition: color .2s; }
-.nav-links a:hover, .nav-links a.active { color: #0f172a; font-weight: 600; }
-.nav-actions { display: flex; align-items: center; gap: 12px; }
-.publish-btn {
-  background: #0f172a; color: #fff; padding: 8px 16px; border-radius: 20px;
-  font-size: 13px; font-weight: 500;
-}
-.publish-btn:hover { background: #1e293b; }
-.avatar-btn { font-size: 20px; }
-
 /* Hero */
 .hero {
   background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
   padding: 64px 24px 56px;
 }
 .hero-inner { max-width: 720px; margin: 0 auto; text-align: center; }
-.hero h1 { font-size: 40px; font-weight: 800; color: #0f172a; letter-spacing: -1px; line-height: 1.2; }
+.hero h1 { font-size: 40px; font-weight: 800; color: #0f172a; letter-spacing: -1px; line-height: 1.2; margin: 0; }
 .hero h1 em { font-style: normal; color: #2563eb; }
 .hero-sub { color: #64748b; margin-top: 12px; font-size: 15px; }
 .search-bar {
@@ -170,14 +145,16 @@ function doSearch() { router.push('/product') }
   background: #2563eb; color: #fff; border: none; padding: 10px 24px;
   border-radius: 20px; font-size: 14px; font-weight: 500; cursor: pointer;
 }
+.search-bar button:hover { background: #1d4ed8; }
 .hero-tags { margin-top: 16px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 .hero-tags span { font-size: 12px; color: #94a3b8; }
 
 /* 通用 section */
 .section { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
 .section-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 20px; }
-.section-head h2 { font-size: 20px; font-weight: 700; color: #0f172a; }
-.more-link { font-size: 13px; color: #64748b; }
+.section-head h2 { font-size: 20px; font-weight: 700; color: #0f172a; margin: 0; }
+.more-link { font-size: 13px; color: #64748b; text-decoration: none; }
+.more-link:hover { color: #2563eb; }
 
 /* 分类宫格 */
 .cat-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 16px; }
@@ -209,6 +186,5 @@ function doSearch() { router.push('/product') }
 @media (max-width: 900px) {
   .cat-grid { grid-template-columns: repeat(4, 1fr); }
   .goods-grid { grid-template-columns: repeat(2, 1fr); }
-  .nav-links { display: none; }
 }
 </style>

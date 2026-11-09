@@ -1,4 +1,3 @@
-
 import { createRouter, createWebHistory } from 'vue-router'
 
 import Home from '../views/Home.vue'
@@ -9,6 +8,8 @@ import ProductDetail from '../views/ProductDetail.vue'
 import PublishProduct from '../views/PublishProduct.vue'
 import CategoryTree from '../views/CategoryTree.vue'
 import Login from '../views/Login.vue'
+import Register from '../views/Register.vue'
+import Forgot from '../views/Forgot.vue'
 import AdminPermission from '../views/AdminPermission.vue'
 import FileTransfer from '../views/FileTransfer.vue'
 
@@ -32,14 +33,16 @@ const router = createRouter({
 
   routes: [
     { path: '/', name: 'Home', component: Home },
-    { path: '/login', name: 'Login', component: Login },
+    { path: '/login', name: 'Login', component: Login, meta: { guestOnly: true } },
+    { path: '/register', name: 'Register', component: Register, meta: { guestOnly: true } },
+    { path: '/forgot', name: 'Forgot', component: Forgot, meta: { guestOnly: true } },
     { path: '/product', name: 'Product', component: ProductMarket },
     { path: '/product/:id', name: 'ProductDetail', component: ProductDetail },
-    { path: '/publish', name: 'Publish', component: PublishProduct },
+    { path: '/publish', name: 'Publish', component: PublishProduct, meta: { requiresAuth: true } },
     { path: '/categories', name: 'Categories', component: CategoryTree },
     { path: '/ai', name: 'AI', component: AiAssistant },
     { path: '/file-transfer', name: 'FileTransfer', component: FileTransfer },
-    { path: '/profile', name: 'Profile', component: Profile },
+    { path: '/profile', name: 'Profile', component: Profile, meta: { requiresAuth: true } },
 
     // 用户端补充
     { path: '/my-publishes', name: 'MyPublishes', component: MyPublishes, meta: { requiresAuth: true } },
@@ -51,53 +54,151 @@ const router = createRouter({
     // 旧的权限占位页（保留兼容）
     { path: '/admin/old', name: 'AdminPermission', component: AdminPermission, meta: { requiresAuth: true } },
 
-    // ===== 管理员后台（嵌套布局） =====
+    // ===== 管理员后台（嵌套布局）=====
+    // 每个子页声明所需权限码，守卫按后端下发的 perms 逐页校验
     {
       path: '/admin',
       component: AdminLayout,
       meta: { requiresAuth: true, requiresAdmin: true },
       children: [
         { path: '', redirect: '/admin/users' },
-        { path: 'users', name: 'AdminUsers', component: AdminUsers },
-        { path: 'goods', name: 'AdminGoods', component: AdminGoods },
-        { path: 'categories', name: 'AdminCategories', component: AdminCategories },
-        { path: 'reports', name: 'AdminReports', component: AdminReports },
-        { path: 'roles', name: 'AdminRoles', component: AdminRoles },
-      ]
-    }
-  ]
+        {
+          path: 'users',
+          name: 'AdminUsers',
+          component: AdminUsers,
+          meta: { perm: 'user:manage' },
+        },
+        {
+          path: 'goods',
+          name: 'AdminGoods',
+          component: AdminGoods,
+          meta: { perm: 'goods:audit' },
+        },
+        {
+          path: 'categories',
+          name: 'AdminCategories',
+          component: AdminCategories,
+          meta: { perm: 'category:manage' },
+        },
+        {
+          path: 'reports',
+          name: 'AdminReports',
+          component: AdminReports,
+          meta: { perm: 'report:handle' },
+        },
+        {
+          path: 'roles',
+          name: 'AdminRoles',
+          component: AdminRoles,
+          meta: { perm: 'dict:manage' },
+        },
+      ],
+    },
+
+    // 兜底：未匹配路径回首页
+    { path: '/:pathMatch(.*)*', redirect: '/' },
+  ],
 })
 
 // ============================================================
-// 全局路由守卫
+// 全局路由守卫（按后端 perms + 菜单驱动）
+// ------------------------------------------------------------
+// 1. 需要登录但没 token → /login?redirect=原路径
+// 2. meta.perm 声明了权限码 → 校验 userInfo.perms
+// 3. meta.requiresAdmin → 校验菜单里是否有 /admin（后端不给我就不放行）
+// 4. 已登录访问登录/注册页 → 直接回首页
 // ============================================================
+
+const ADMIN_PERMS = [
+  'user:manage',
+  'user:status',
+  'goods:audit',
+  'report:handle',
+  'category:manage',
+  'dict:manage',
+]
+
+function readJSON(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key)
+    return raw ? JSON.parse(raw) : fallback
+  } catch {
+    return fallback
+  }
+}
+
 function getUserInfo() {
-  try { return JSON.parse(localStorage.getItem('userInfo') || '{}') } catch { return {} }
+  return readJSON('userInfo', {})
+}
+
+function getUserPerms() {
+  const info = getUserInfo()
+  return Array.isArray(info.perms) ? info.perms : []
+}
+
+function getUserMenus() {
+  return readJSON('userMenus', [])
+}
+
+function isAdminUser(info, perms, menus) {
+  if (info.roleCode === 'ADMIN') return true
+  const roles = readJSON('userRoles', [])
+  if (Array.isArray(roles) && roles.includes('ADMIN')) return true
+  if (menus.some((m) => m && m.path === '/admin')) return true
+  return perms.some((p) => ADMIN_PERMS.includes(p))
 }
 
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
-  const userInfo = getUserInfo()
+  const info = getUserInfo()
+  const perms = getUserPerms()
+  const menus = getUserMenus()
 
-  if (to.meta.requiresAuth && !token) {
+  // 1. 未登录访问需登录页面
+  const needAuth = to.matched.some((r) => r.meta?.requiresAuth)
+  if (needAuth && !token) {
     next({ path: '/login', query: { redirect: to.fullPath } })
     return
   }
 
-  if (to.meta.requiresAdmin && token) {
-    const isAdmin = userInfo.roleCode === 'ADMIN' || userInfo.userType === 9
-    if (!isAdmin) {
+  // 2. 已登录访问登录 / 注册 / 忘记密码 → 回首页
+  if (to.meta.guestOnly && token) {
+    next('/')
+    return
+  }
+
+  if (token) {
+    // 3. 具体权限码校验（取最深一层路由声明的 perm）
+    const permRequired = to.matched
+      .map((r) => r.meta?.perm)
+      .filter(Boolean)
+      .pop()
+
+    if (permRequired) {
+      const ok = perms.includes(permRequired) || isAdminUser(info, perms, menus)
+      if (!ok) {
+        ElMessageDenied(permRequired)
+        next({ path: '/', query: { denied: '1' } })
+        return
+      }
+    }
+
+    // 4. 管理后台整体准入：菜单里没有 /admin 且不具备任何管理权限 → 拦截
+    const needAdmin = to.matched.some((r) => r.meta?.requiresAdmin)
+    if (needAdmin && !isAdminUser(info, perms, menus)) {
+      ElMessageDenied()
       next({ path: '/', query: { denied: '1' } })
       return
     }
   }
 
-  if (to.path === '/login' && token) {
-    next('/')
-    return
-  }
-
   next()
 })
+
+// 轻量提示：仅首页用 query 提示，避免引入额外依赖
+function ElMessageDenied(perm) {
+  // 用 sessionStorage 暂存，首页读取后提示（避免在守卫里直接弹窗打断跳转）
+  sessionStorage.setItem('cm_denied', perm || 'admin')
+}
 
 export default router
