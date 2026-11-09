@@ -125,4 +125,30 @@ public class GoodsController {
                 .page(page);
         return R.ok(pageData);
     }
+
+    /**
+     * 商品上下架（仅自己发布的商品）
+     *
+     * POST /api/v1/goods/status/{id}?status=ON_SHELF|OFF_SHELF
+     * SOLD 状态由订单流程触发，这里不允许手动改。
+     */
+    @PostMapping("/status/{id}")
+    public R changeStatus(@PathVariable Long id, @RequestParam String status) {
+        Long userId = UserContext.getUserId();
+        Goods goods = goodsService.getById(id);
+        if (goods == null) {
+            return R.fail("商品不存在");
+        }
+        if (!goods.getSellerId().equals(userId)) {
+            return R.fail("无权操作别人的商品");
+        }
+        if (!"ON_SHELF".equals(status) && !"OFF_SHELF".equals(status)) {
+            return R.error(400, "status 只能是 ON_SHELF（上架）或 OFF_SHELF（下架）");
+        }
+        Goods upd = new Goods();
+        upd.setId(id);
+        upd.setGoodsStatus(status);
+        goodsService.updateById(upd);
+        return R.ok("操作成功");
+    }
 }
