@@ -147,9 +147,9 @@ INSERT IGNORE INTO `goods_category` (`category_name`, `parent_id`, `sort`) VALUE
 -- ============================================================
 
 INSERT IGNORE INTO `sys_user`
-  (`student_no`, `email`, `password`, `nick_name`, `department`, `grade`, `user_type`, `account_status`) VALUES
-('2024110640', 'zhangay@test.com',      '$2b$12$k4q.tZh/r11iFIsF3/63U.KuU.m8C1PEVU4uR3nVr3.zVVAmGEwMq', '张爱阳',   '软件工程', '2024级', 9, 'NORMAL'),
-('2024777777', '2024777777@qq.com',     '$2b$12$k4q.tZh/r11iFIsF3/63U.KuU.m8C1PEVU4uR3nVr3.zVVAmGEwMq', '测试学生', '软件工程', '2024级', 1, 'NORMAL');
+  (`student_no`, `phone`, `email`, `password`, `nick_name`, `department`, `grade`, `user_type`, `account_status`) VALUES
+('2024110640', '13800000001', 'zhangay@test.com',      '$2b$12$k4q.tZh/r11iFIsF3/63U.KuU.m8C1PEVU4uR3nVr3.zVVAmGEwMq', '张爱阳',   '软件工程', '2024级', 9, 'NORMAL'),
+('2024777777', '13800000002', '2024777777@qq.com',     '$2b$12$k4q.tZh/r11iFIsF3/63U.KuU.m8C1PEVU4uR3nVr3.zVVAmGEwMq', '测试学生', '软件工程', '2024级', 1, 'NORMAL');
 
 -- ============================================================
 -- 七、测试账号的角色绑定

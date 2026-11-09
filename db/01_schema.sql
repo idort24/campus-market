@@ -22,7 +22,8 @@ SET NAMES utf8mb4;
 DROP TABLE IF EXISTS `sys_user`;
 CREATE TABLE `sys_user` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '用户主键userId',
-  `student_no` varchar(50) NOT NULL COMMENT '学号，唯一，登录账号',
+  `student_no` varchar(50) NOT NULL COMMENT '学号，唯一，密码登录账号',
+  `phone` varchar(20) DEFAULT NULL COMMENT '手机号，唯一，短信登录账号；注册必填，允许为空以兼容存量数据',
   `email` varchar(100) NOT NULL COMMENT '校园邮箱，唯一',
   `password` varchar(128) NOT NULL COMMENT 'bcrypt加密密码，不存明文',
   `nick_name` varchar(30) NOT NULL COMMENT '昵称全局唯一',
@@ -42,6 +43,7 @@ CREATE TABLE `sys_user` (
   `is_deleted` tinyint(1) DEFAULT '0' COMMENT '逻辑删除',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_student_no` (`student_no`),
+  UNIQUE KEY `uk_phone` (`phone`),
   UNIQUE KEY `uk_email` (`email`),
   UNIQUE KEY `uk_nick_name` (`nick_name`),
   KEY `idx_user_student` (`student_no`,`is_deleted`),

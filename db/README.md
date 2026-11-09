@@ -13,6 +13,7 @@
 | `03_check.sql` | 17 项自检报表 | 初始化后验收，每次改库后复核 |
 | `04_upgrade_20261109.sql` | 已有旧库的增量修复（不改表结构） | 库里已有数据、不想重建时用 |
 | `05_demo_data.sql` | 24 条演示商品 + 分类统计快照（可重复执行） | 前端关掉 mock 后页面空白时跑，灌演示数据 |
+| `06_upgrade_phone_20261109.sql` | 给 `sys_user` 补 `phone` 列 + 唯一索引 | **仅存量库需要**；全新初始化不用跑（`01` 已含该列） |
 | `_backup_before_upgrade_20261109.sql` | 升级前的完整备份 | 出问题回滚用 |
 
 > 根目录那个 `campus_market.sql` 是旧文件，**不要再用**。它的测试账号密码密文被 PowerShell 的 `$` 变量解析截断成了 32 字符（完整应为 60 字符），拿它导入后登录必然失败。原因见第四节第 3 条。
@@ -40,23 +41,34 @@
 ### 场景 B：库里已有数据，只想补齐
 
 ```powershell
+# 1. 修 user_type、补账号状态字典、补 7 条菜单权限（可重复执行）
 & "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" --user=root --password=你的密码 --default-character-set=utf8mb4 -e "source D:/files/cm/db/04_upgrade_20261109.sql"
+
+# 2. 补 sys_user.phone 列（只跑一次，ALTER 不可重复执行）
+& "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" --user=root --password=你的密码 --default-character-set=utf8mb4 -e "source D:/files/cm/db/06_upgrade_phone_20261109.sql"
 ```
 
 `04` 只做三件事：修 `user_type`、补账号状态字典、补 7 条菜单权限。不改任何表结构、不删业务数据，可重复执行。
+
+`06` 是 2026-11-09 前端联调时补的：后端 `SysUser` 实体有 `phone` 字段，建表时漏了，导致所有登录请求报
+`Unknown column 'phone' in 'field list'` 直接 500。跑完 `06` 登录才恢复。
 
 ---
 
 ## 三、测试账号
 
-| 学号 | 密码 | 昵称 | user_type | 角色 |
-|---|---|---|---|---|
-| `2024110640` | `123456` | 张爱阳 | 9 管理员 | ADMIN（23 项权限） |
-| `2024777777` | `123456` | 测试学生 | 1 普通学生 | STUDENT（12 项权限） |
+| 学号 | 手机号 | 密码 | 昵称 | user_type | 角色 |
+|---|---|---|---|---|---|
+| `2024110640` | `13800000001` | `123456` | 张爱阳 | 9 管理员 | ADMIN（23 项权限） |
+| `2024777777` | `13800000002` | `123456` | 测试学生 | 1 普通学生 | STUDENT（12 项权限） |
 
 密码是 BCrypt 密文入库，明文 `123456` 已用后端 `PasswordUtil.matches()` 实测校验通过（`true`），错误密码返回 `false`。
 
-登录接口只认 `student_no`，不认邮箱、不认昵称。
+登录账号口径（实测确认，见 `SysUserController.login`）：
+
+- **密码登录**：`username` 传**学号**，后端按 `student_no` 查
+- **短信登录**：`username` 传**手机号**，后端按 `phone` 查
+- 不认邮箱、不认昵称
 
 ---
 
@@ -178,6 +190,29 @@ $2b$12$k4q.tZh/r11iFIsF3/63U.KuU.m8C1PEVU4uR3nVr3.zVVAmGEwMq
 2. 后续 `/api/v1/user/menus` 接口（马智贤任务第 8 项）需要它。
 
 **注意**：前端尚未接入这套菜单，目前是静态路由。别在答辩时说「菜单完全由数据库动态生成」，会被追问代码在哪。
+
+---
+
+### 问题 6：`sys_user` 缺 `phone` 列，登录直接 500（已修复）
+
+**现象**（2026-11-09 前端切真后端实测）：`POST /api/v1/user/login` 返回 `{"code":500,"msg":"服务器开小差了"}`，后端日志堆栈：
+
+```
+Caused by: java.sql.SQLSyntaxErrorException: Unknown column 'phone' in 'field list'
+```
+
+**根因**：后端实体 `SysUser` 有 `private String phone; // 手机号 phone（注册必填，唯一索引）`，
+但 `01_schema.sql` 建表时漏了这一列。登录时 `SELECT ... phone ... FROM sys_user` 直接抛 SQL 异常，
+密码登录、短信登录、注册全部不可用。
+
+**影响**：整条登录链路瘫痪。这是「前后端都对、库少一列」的典型。
+
+**已修**：
+- `01_schema.sql` 的 `sys_user` 增加 `phone varchar(20)` + `uk_phone` 唯一索引（全新库直接可用）
+- `02_seed.sql` 两个测试账号带手机号
+- 存量库跑 `06_upgrade_phone_20261109.sql` 补列
+
+**验证**：补列后重新登录 → `code=1`，拿到 token，`roleCode=ADMIN`、23 项权限正常返回。
 
 ---
 
