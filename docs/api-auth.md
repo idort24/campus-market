@@ -353,3 +353,40 @@ dict:manage
 | 缓存键常量 | `common/CacheKeys.java` |
 | 全局异常处理 | `common/GlobalExceptionHandler.java` |
 | 密码加密 / JWT 工具 | `utils/PasswordUtil.java`、`utils/JwtUtil.java` |
+
+---
+
+## 七、联调常用业务接口路径（给前端何曼妮）
+
+| 前端要的功能 | 实际路径 |
+|---|---|
+| 我的发布 | `GET /api/v1/goods/my` |
+| 我的收藏 | `GET /api/v1/goodsCollect/my`；取消收藏 `DELETE /api/v1/goodsCollect/{goodsId}`；是否已收藏 `GET /api/v1/goodsCollect/has/{goodsId}` |
+| 我买的 / 我卖的 | `GET /api/v1/order/myBuy`、`GET /api/v1/order/mySell`；下单 `POST /api/v1/order/create`；确认收货 `PUT /api/v1/order/confirm/{id}`；取消 `PUT /api/v1/order/cancel/{id}` |
+| 我的举报 | `POST /api/v1/report/add`、`GET /api/v1/report/my` |
+
+### 聊天消息（新做，已走登录拦截）
+
+```
+GET  /api/v1/chat/messages?userId=对方id   # 拉取会话历史，按时间正序，进入会话自动把对方发来的未读标已读
+POST /api/v1/chat/messages                 # 发消息
+```
+
+POST body：
+
+```json
+{ "receiverId": 5, "content": "你好，这件还在吗", "msgImage": "可选，图片地址" }
+```
+
+`fromUserId` 从 token 取，前端不传也不能伪造；返回整条 `ChatMessage`：
+
+| 字段 | 含义 |
+|---|---|
+| `senderId` / `receiverId` | 发送 / 接收人 id |
+| `msgContent` | 文本内容 |
+| `msgImage` | 图片地址（可空） |
+| `readFlag` | 0 未读，1 已读 |
+| `isAiMessage` | 0 用户消息，1 智能助手回复 |
+| `createTime` | 发送时间 |
+
+错误：缺 `receiverId` / 格式错 / 发给自己 / 内容全空 → 400；未带 token → 401。
