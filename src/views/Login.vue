@@ -8,7 +8,7 @@
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { login, sendSmsCode } from '../api/auth.js'
+import { login, loginBySms, sendSmsCode } from '../api/auth.js'
 import { saveAuth, loadAndCacheMenus, isLoggedIn } from '../utils/auth.js'
 import CaptchaBox from '../components/CaptchaBox.vue'
 
@@ -106,12 +106,10 @@ async function submitSms() {
 
   loading.value = true
   try {
-    const res = await login({
-      username: smsForm.value.phone,
-      password: '123456', // 演示：短信登录走内置账号密码，真实环境后端单独校验
-      captchaKey: '',
-      captchaCode: '',
-      smsCode: smsForm.value.code,
+    // 短信分支：captchaKey 传 sms:{手机号}，后端据此走短信校验，不再校验图形码
+    const res = await loginBySms({
+      phone: smsForm.value.phone,
+      smsCode: smsForm.value.code.trim(),
     })
     await afterLogin(res)
   } catch (e) {
@@ -126,6 +124,14 @@ const switchTabs = [
   { key: 'sms', label: '短信登录' },
   { key: 'qr', label: '扫码登录' },
 ]
+
+function switchMode(t) {
+  if (t.disabled) {
+    ElMessage.info(t.tip || '该登录方式暂未开放')
+    return
+  }
+  mode.value = t.key
+}
 
 const titleText = computed(() => {
   if (mode.value === 'sms') return '手机号快捷登录'
@@ -164,9 +170,11 @@ const titleText = computed(() => {
           <button
             v-for="t in switchTabs"
             :key="t.key"
-            :class="['tab', { active: mode === t.key }]"
+            :class="['tab', { active: mode === t.key, disabled: t.disabled }]"
             type="button"
-            @click="mode = t.key"
+            :aria-disabled="t.disabled ? 'true' : 'false'"
+            :title="t.disabled ? t.tip : ''"
+            @click="switchMode(t)"
           >
             {{ t.label }}
           </button>
@@ -232,7 +240,7 @@ const titleText = computed(() => {
             {{ loading ? '登录中…' : '登 录' }}
           </button>
 
-          <p class="bottom-tip">演示账号：2024110601 / 短信登录会回显验证码</p>
+          <p class="bottom-tip">演示账号：2024110601（手机 13900000000）/ 开发期验证码会直接提示在页面上</p>
         </form>
 
         <!-- ========== 扫码登录（占位） ========== -->
@@ -322,6 +330,10 @@ const titleText = computed(() => {
   transition: all 0.18s;
 }
 .tab.active { background: #fff; color: #0f172a; font-weight: 600; box-shadow: 0 1px 4px rgba(15,23,42,0.08); }
+.tab.disabled, .tab.disabled:hover {
+  color: #cbd5e1; cursor: not-allowed; background: transparent;
+  text-decoration: line-through; text-decoration-color: #e2e8f0;
+}
 
 /* 字段 */
 .form-body { display: flex; flex-direction: column; gap: 16px; }

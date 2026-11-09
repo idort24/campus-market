@@ -19,7 +19,7 @@ let redirecting = false
 
 // 认证类接口自身的 401（账号密码错、验证码错）不能触发"跳登录页"，
 // 否则用户在登录页输错密码会被立刻踢出去，看起来像页面崩了。
-const AUTH_APIS = ['/user/login', '/user/register', '/auth/captcha', '/auth/password/reset', '/auth/logout']
+const AUTH_APIS = ['/user/login', '/user/register', '/auth/captcha', '/auth/sms/code', '/auth/password/reset', '/auth/logout']
 function isAuthApi(url = '') {
   return AUTH_APIS.some((p) => String(url).includes(p))
 }

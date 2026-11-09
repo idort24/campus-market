@@ -4,7 +4,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { fetchProducts } from '../api/product.js'
-import { addFavorite, removeFavorite } from '../api/favorites.js'
+import { addFavorite, removeFavorite, getFavorites } from '../api/favorites.js'
 import { CATEGORY_OPTIONS } from '../data/categories.js'
 
 const router = useRouter()
@@ -14,7 +14,7 @@ const searchText = ref('')
 const activeCategory = ref('全部')
 // 分类按钮统一取数据库里的一级分类（1-5），不在这里另写一份
 const categories = ['全部', ...CATEGORY_OPTIONS]
-const favoriteIds = ref(new Set([1, 4]))
+const favoriteIds = ref(new Set())
 const userInfo = computed(() => { try { return JSON.parse(localStorage.getItem('userInfo') || '{}') } catch { return {} } })
 const isAdmin = computed(() => userInfo.value?.roleCode === 'ADMIN')
 
@@ -29,8 +29,17 @@ const filteredProducts = computed(() => {
 
 async function loadProducts() {
   loading.value = true
-  try { products.value = await fetchProducts() }
-  catch (e) { ElMessage.error(String(e)) }
+  try {
+    products.value = await fetchProducts()
+    // 收藏状态以后端为准（GET /goodsCollect/my），失败就留空集合，不影响列表展示
+    try {
+      const favs = await getFavorites()
+      favoriteIds.value = new Set(favs.map((f) => f.id))
+    } catch {
+      favoriteIds.value = new Set()
+    }
+  }
+  catch (e) { ElMessage.error(e?.message || '商品加载失败') }
   finally { loading.value = false }
 }
 onMounted(loadProducts)
@@ -50,7 +59,7 @@ async function toggleFavorite(product) {
       ElMessage.success('收藏成功')
     }
     favoriteIds.value = new Set(favoriteIds.value)
-  } catch (e) { ElMessage.error(String(e)) }
+  } catch (e) { ElMessage.error(e?.message || '收藏操作失败') }
 }
 </script>
 

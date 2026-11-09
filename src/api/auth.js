@@ -75,10 +75,34 @@ export function getMenus() {
 }
 
 /**
- * 发送短信验证码（忘记密码用，后端暂未单列接口，这里只做前端计时占位）
- * 真实联调时如果后端提供 /auth/sms/code，改这里即可。
+ * 发送短信验证码（开发期模拟通道，马智贤 2026-11 提供）
+ * ------------------------------------------------------------
+ * 后端：POST /api/v1/auth/sms/code  {phone}
+ *   生成 6 位码，缓存 5 分钟，打到后端控制台日志里（演示时看控制台）
+ * 注意：此接口只在 captcha.enabled=true 的登录流程里作为「短信分支」使用，
+ *       登录时 captchaKey 传 `sms:{手机号}`，就不走图形码了。
  */
 export function sendSmsCode(phone) {
   if (USE_MOCK) return authMock.sendSmsCode(phone)
-  return Promise.resolve({ success: true })
+  return http.post('/auth/sms/code', { phone })
+}
+
+/**
+ * 短信验证码登录（登录的短信分支）
+ * ------------------------------------------------------------
+ * 仍走 POST /user/login，但 captchaKey 传 `sms:{手机号}`，后端据此走短信校验，
+ * 不再校验图形码；password 不参与（手机号即身份）。
+ * 待联调确认：若后端仍要求 password 字段非空，这里补一个占位值即可。
+ * @param {{phone:string, smsCode:string}} payload
+ */
+export function loginBySms({ phone, smsCode }) {
+  const payload = {
+    username: phone,
+    password: '',
+    captchaKey: `sms:${phone}`,
+    captchaCode: smsCode,
+    smsCode,
+  }
+  if (USE_MOCK) return authMock.login(payload)
+  return http.post('/user/login', payload)
 }

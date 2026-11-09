@@ -5,9 +5,10 @@
 //   我的收藏      GET    /api/v1/goodsCollect/my
 //   取消收藏      DELETE /api/v1/goodsCollect/{goodsId}
 //   是否已收藏    GET    /api/v1/goodsCollect/has/{goodsId}
-//   添加收藏      POST   /api/v1/goodsCollect/add  ← 待马智贤最终确认
+//   添加收藏      POST   /api/v1/goodsCollect/add?goodsId=123   ← goodsId 是 query 参数，不是 body
 //
 // 注意：不是 /favorites，原来写的那套路径后端没有。
+// 重复收藏后端返回 code=500，文案「已经收藏过该商品」，页面直接提示即可。
 // 后端字段驼峰：id、userId、goodsId、createTime
 // ============================================================
 import http from './http'
@@ -31,12 +32,14 @@ export async function getFavorites(params = {}) {
 }
 
 // 收藏商品
+// 后端口径（马智贤）：POST /api/v1/goodsCollect/add?goodsId=123
+// goodsId 走 query，不能放进 JSON body；重复收藏返回 code=500「已经收藏过该商品」
 export async function addFavorite(goodsId) {
   if (USE_MOCK) {
     await delay(100)
     return { goodsId }
   }
-  return http.post('/goodsCollect/add', { goodsId })
+  return http.post('/goodsCollect/add', null, { params: { goodsId } })
 }
 
 // 取消收藏（后端按 goodsId 取消，不按收藏记录 id）

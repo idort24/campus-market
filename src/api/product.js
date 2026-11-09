@@ -125,6 +125,21 @@ export async function fetchMyGoods(params = {}) {
 }
 
 /**
+ * 上架 / 下架自己的商品
+ * 后端（马智贤）：PUT /api/v1/goods/{id}/status?status=ON_SHELF|OFF_SHELF
+ * status 走 query；传别的值 400；只能改自己发布的商品
+ */
+export async function updateGoodsStatus(id, status) {
+  if (USE_MOCK) {
+    await delay(100)
+    const p = productList.value.find((x) => x.id === Number(id))
+    if (p) p.goodsStatus = status
+    return { id, status }
+  }
+  return http.put(`/goods/${id}/status`, null, { params: { status } })
+}
+
+/**
  * 发布新商品
  * 前端表单 → 后端 goods 字段（驼峰）
  */

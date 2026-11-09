@@ -4,7 +4,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { fetchProductById } from '../api/product.js'
-import { addFavorite, removeFavorite } from '../api/favorites.js'
+import { addFavorite, removeFavorite, hasFavorite } from '../api/favorites.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -20,8 +20,16 @@ async function loadDetail() {
   loading.value = true
   try {
     product.value = await fetchProductById(route.params.id)
+    // 收藏按钮状态以后端为准（GET /goodsCollect/has/{goodsId}），失败就当未收藏
+    if (product.value) {
+      try {
+        isFav.value = await hasFavorite(product.value.id)
+      } catch {
+        isFav.value = false
+      }
+    }
   } catch (e) {
-    ElMessage.error(String(e))
+    ElMessage.error(e?.message || '商品加载失败')
   } finally {
     loading.value = false
   }
@@ -43,7 +51,7 @@ async function toggleFavorite() {
       ElMessage.success('收藏成功')
     }
   } catch (e) {
-    ElMessage.error(String(e))
+    ElMessage.error(e?.message || '收藏操作失败')
   }
 }
 

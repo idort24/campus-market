@@ -174,21 +174,35 @@ export const authMock = {
   },
 
   // 登录
-  async login({ username, password, captchaKey, captchaCode } = {}) {
+  // 两个分支：
+  //   图形码分支：captchaKey 是 getCaptcha() 返回的 key，校验 4 位图形码
+  //   短信分支  ：captchaKey 形如 sms:13800000000（马智贤后端口径），校验 6 位短信码，不校验密码
+  async login({ username, password, captchaKey, captchaCode, smsCode } = {}) {
     await delay(400)
 
-    const capErr = this.verifyCaptcha(captchaKey, captchaCode)
-    if (capErr) throw new Error(capErr)
+    const isSms = typeof captchaKey === 'string' && captchaKey.startsWith('sms:')
+    if (isSms) {
+      const phone = captchaKey.slice(4)
+      const code = String(smsCode ?? captchaCode ?? '').trim()
+      const saved = readJSON(LS_SMS, null)
+      if (!saved || saved.phone !== phone) throw new Error('请先获取短信验证码')
+      if (Date.now() > saved.expireAt) throw new Error('短信验证码已过期，请重新获取')
+      if (saved.code !== code) throw new Error('短信验证码错误')
+      localStorage.removeItem(LS_SMS) // 一次性，避免复用
+    } else {
+      const capErr = this.verifyCaptcha(captchaKey, captchaCode)
+      if (capErr) throw new Error(capErr)
+    }
 
     const account = String(username || '').trim()
     if (!account) throw new Error('请输入学号或手机号')
-    if (!password) throw new Error('请输入密码')
+    if (!isSms && !password) throw new Error('请输入密码')
 
     const user = getAllUsers().find(
       (u) => u.studentNo === account || u.phone === account
     )
     if (!user) throw new Error('账号不存在，请先注册')
-    if (user.password !== password) throw new Error('密码错误')
+    if (!isSms && user.password !== password) throw new Error('密码错误')
 
     const token = `mock.${window.btoa(unescape(encodeURIComponent(user.studentNo)))}.${Date.now()}`
     const roles = [user.roleCode]

@@ -2,7 +2,7 @@
 import NavBar from '../components/NavBar.vue'
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { fetchMyGoods } from '../api/product.js'
+import { fetchMyGoods, updateGoodsStatus } from '../api/product.js'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const router = useRouter()
@@ -23,17 +23,28 @@ async function load() {
 }
 onMounted(load)
 
+// 上下架统一走 PUT /api/v1/goods/{id}/status?status=ON_SHELF|OFF_SHELF
+// 先乐观更新界面，失败回滚，避免按钮点了没反应
+async function changeStatus(item, status) {
+  const old = item.status
+  item.status = status
+  try {
+    await updateGoodsStatus(item.id, status)
+    ElMessage.success(status === 'OFF_SHELF' ? '已下架' : '已重新上架')
+  } catch (e) {
+    item.status = old
+    ElMessage.error(e.message || '操作失败，请稍后重试')
+  }
+}
+
 function offShelf(item) {
   ElMessageBox.confirm(`确定要下架「${item.name}」吗？`, '提示', { type: 'warning' })
-    .then(() => {
-      item.status = 'OFF_SHELF'
-      ElMessage.success('已下架')
-    }).catch(() => {})
+    .then(() => changeStatus(item, 'OFF_SHELF'))
+    .catch(() => {})
 }
 
 function onShelf(item) {
-  item.status = 'ON_SHELF'
-  ElMessage.success('已重新上架')
+  changeStatus(item, 'ON_SHELF')
 }
 </script>
 
