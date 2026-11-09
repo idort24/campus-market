@@ -1,4 +1,8 @@
 <script setup>
+// ============================================================
+// 举报处理（管理员后台）
+// 字段驼峰：goodsTitle / createTime；按钮权限 report:handle
+// ============================================================
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { adminApi } from '../../mock/admin.js'
@@ -8,7 +12,12 @@ const loading = ref(false)
 
 async function load() {
   loading.value = true
-  try { list.value = await adminApi.getReports() } finally { loading.value = false }
+  try {
+    const res = await adminApi.getReports()
+    list.value = Array.isArray(res) ? res : (res.records || [])
+  } finally {
+    loading.value = false
+  }
 }
 
 async function handle(row, action) {
@@ -29,7 +38,7 @@ onMounted(load)
 
     <el-table :data="list" v-loading="loading" border stripe>
       <el-table-column prop="id" label="ID" width="70" />
-      <el-table-column prop="goods_title" label="被举报商品" />
+      <el-table-column prop="goodsTitle" label="被举报商品" />
       <el-table-column prop="reporter" label="举报人" width="120" />
       <el-table-column prop="reason" label="举报原因" width="180" />
       <el-table-column label="状态" width="100">
@@ -39,12 +48,12 @@ onMounted(load)
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="create_time" label="提交时间" width="180" />
+      <el-table-column prop="createTime" label="提交时间" width="180" />
       <el-table-column label="操作" width="200" fixed="right">
         <template #default="{ row }">
           <template v-if="row.status === 'PENDING'">
-            <el-button size="small" type="danger" @click="handle(row, 'ban')">下架商品</el-button>
-            <el-button size="small" @click="handle(row, 'reject')">驳回</el-button>
+            <el-button v-permission="'report:handle'" size="small" type="danger" @click="handle(row, 'ban')">下架商品</el-button>
+            <el-button v-permission="'report:handle'" size="small" @click="handle(row, 'reject')">驳回</el-button>
           </template>
           <span v-else style="color:#999">—</span>
         </template>

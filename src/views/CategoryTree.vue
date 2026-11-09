@@ -1,7 +1,11 @@
 ﻿<script setup>
-import { ref, onMounted } from 'vue'
+import NavBar from '../components/NavBar.vue'
+import { ref, onMounted, computed } from 'vue'
 import { ElTree } from 'element-plus'
 import { getCategoryTree, getCategoryTable } from '../api/categories.js'
+
+const userInfo = computed(() => { try { return JSON.parse(localStorage.getItem('userInfo') || '{}') } catch { return {} } })
+const isAdmin = computed(() => userInfo.value?.roleCode === 'ADMIN')
 
 // el-tree 用的嵌套数据
 const treeData = ref([])
@@ -20,18 +24,18 @@ async function loadData() {
 
 // 点击树节点
 function handleNodeClick(data, node) {
-  // data = 当前节点（{id, category_name, parent_id, children}）
+  // data = 当前节点（{id, categoryName, parentId, children}），字段与后端保持一致
   const parentName =
-    data.parent_id && data.parent_id !== 0
-      ? flatTable.value.find((r) => r.id === data.parent_id)?.category_name ?? '—'
+    data.parentId && data.parentId !== 0
+      ? flatTable.value.find((r) => r.id === data.parentId)?.categoryName ?? '—'
       : '（根分类，无父节点）'
 
-  const childNames = (data.children || []).map((c) => c.category_name)
+  const childNames = (data.children || []).map((c) => c.categoryName)
 
   selected.value = {
     id: data.id,
-    name: data.category_name,
-    parentId: data.parent_id,
+    name: data.categoryName,
+    parentId: data.parentId,
     parentName,
     children: childNames.length ? childNames : ['（无子分类）'],
     path: getPath(node)
@@ -39,12 +43,12 @@ function handleNodeClick(data, node) {
   treeKey.value = data.id
 }
 
-// 从根到当前节点的路径，例如：电子产品 / 耳机
+// 从根到当前节点的路径，例如：数码产品 / 手机
 function getPath(node) {
   const names = []
   let cur = node
-  while (cur && cur.data && cur.data.category_name) {
-    names.unshift(cur.data.category_name)
+  while (cur && cur.data && cur.data.categoryName) {
+    names.unshift(cur.data.categoryName)
     cur = cur.parent
   }
   return names.join(' / ')
@@ -56,29 +60,11 @@ onMounted(loadData)
 <template>
   <div class="cat-page">
     <!-- 顶部导航 -->
-    <header class="navbar">
-      <div class="nav-inner">
-        <div class="logo" @click="$router.push('/')">
-          <span class="logo-icon">🛍️</span><span class="logo-text">校园集市</span>
-        </div>
-        <nav class="nav-links">
-          <router-link to="/" exact-active-class="active">首页</router-link>
-          <router-link to="/product" active-class="active">商品市场</router-link>
-          <router-link to="/publish" active-class="active">发布商品</router-link>
-          <router-link to="/categories" active-class="active">分类浏览</router-link>
-          <router-link to="/ai" active-class="active">AI助手</router-link>
-          <router-link to="/profile" active-class="active">个人中心</router-link>
-          <router-link to="/admin" active-class="active">管理后台</router-link>
-        </nav>
-        <div class="nav-actions">
-          <router-link to="/publish" class="publish-btn">＋ 发布</router-link>
-        </div>
-      </div>
-    </header>
+    <NavBar />
 
     <main class="cat-container">
       <section class="cat-header">
-        <h1>商品分类管理</h1>
+        <h1>分类浏览</h1>
       </section>
 
       <div class="cat-layout">
@@ -88,7 +74,7 @@ onMounted(loadData)
           <p class="hint">点击节点查看详情，可展开/折叠父分类</p>
           <el-tree
             :data="treeData"
-            :props="{ label: 'category_name', children: 'children' }"
+            :props="{ label: 'categoryName', children: 'children' }"
             node-key="id"
             highlight-current
             default-expand-all
@@ -137,9 +123,9 @@ onMounted(loadData)
       <div class="schema-card">
         <h3>与后端 MySQL 邻接表的对接约定</h3>
         <p>
-          分类表使用 <code>id</code> + <code>parent_id</code> 组织层级：
-          根分类 <code>parent_id = 0</code>，子分类的 <code>parent_id</code> 指向父分类的 <code>id</code>。
-          后端接口 <code>GET /api/categories</code> 返回这张邻接表，前端用 <code>buildCategoryTree()</code> 转成树。
+          分类表使用 <code>id</code> + <code>parentId</code> 组织层级：
+          根分类 <code>parentId = 0</code>，子分类的 <code>parentId</code> 指向父分类的 <code>id</code>。
+          后端接口 <code>GET /api/v1/categories</code> 返回这张邻接表，前端用 <code>getCategoryTree()</code> 转成树。
         </p>
         <pre>{{ JSON.stringify(flatTable.slice(0, 4), null, 2) }}</pre>
       </div>

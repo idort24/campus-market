@@ -1,4 +1,5 @@
 <script setup>
+import NavBar from '../components/NavBar.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -12,6 +13,8 @@ const searchText = ref('')
 const activeCategory = ref('全部')
 const categories = ['全部', '数码产品', '教材书籍', '生活用品', '运动用品']
 const favoriteIds = ref(new Set([1, 4]))
+const userInfo = computed(() => { try { return JSON.parse(localStorage.getItem('userInfo') || '{}') } catch { return {} } })
+const isAdmin = computed(() => userInfo.value?.roleCode === 'ADMIN')
 
 const filteredProducts = computed(() => {
   return products.value.filter((p) => {
@@ -51,26 +54,7 @@ async function toggleFavorite(product) {
 
 <template>
   <div class="market-page">
-    <header class="navbar">
-      <div class="nav-inner">
-        <div class="logo" @click="router.push('/')">
-          <span class="logo-icon">🛍️</span><span class="logo-text">校园集市</span>
-        </div>
-        <nav class="nav-links">
-          <router-link to="/" exact-active-class="active">首页</router-link>
-          <router-link to="/product" active-class="active">商品市场</router-link>
-          <router-link to="/publish" active-class="active">发布商品</router-link>
-          <router-link to="/categories" active-class="active">分类浏览</router-link>
-          <router-link to="/ai" active-class="active">AI助手</router-link>
-          <router-link to="/profile" active-class="active">个人中心</router-link>
-          <router-link to="/admin" active-class="active">管理后台</router-link>
-        </nav>
-        <div class="nav-actions">
-          <router-link to="/publish" class="publish-btn">＋ 发布</router-link>
-          <router-link to="/profile" class="avatar-btn">👤</router-link>
-        </div>
-      </div>
-    </header>
+    <NavBar />
 
     <main class="container">
       <div class="page-head">

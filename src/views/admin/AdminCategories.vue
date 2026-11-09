@@ -1,4 +1,8 @@
 <script setup>
+// ============================================================
+// 分类管理（管理员后台）
+// 按钮权限：category:manage
+// ============================================================
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { adminApi } from '../../mock/admin.js'
@@ -8,7 +12,16 @@ const loading = ref(false)
 
 async function load() {
   loading.value = true
-  try { tree.value = await adminApi.getCategoryTree() } finally { loading.value = false }
+  try {
+    const res = await adminApi.getCategoryTree()
+    tree.value = Array.isArray(res) ? res : (res.records || [])
+  } finally {
+    loading.value = false
+  }
+}
+
+function todo(action, row) {
+  ElMessage.info(`${action}「${row?.name || '分类'}」功能待后端分类接口就绪`)
 }
 
 onMounted(load)
@@ -27,11 +40,11 @@ onMounted(load)
         <el-table-column label="子分类数" width="120">
           <template #default="{ row }">{{ row.children?.length || 0 }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="200">
-          <template #default>
-            <el-button size="small" type="primary">新增子分类</el-button>
-            <el-button size="small">编辑</el-button>
-            <el-button size="small" type="danger">删除</el-button>
+        <el-table-column label="操作" width="280">
+          <template #default="{ row }">
+            <el-button v-permission="'category:manage'" size="small" type="primary" @click="todo('新增子分类', row)">新增子分类</el-button>
+            <el-button v-permission="'category:manage'" size="small" @click="todo('编辑', row)">编辑</el-button>
+            <el-button v-permission="'category:manage'" size="small" type="danger" @click="todo('删除', row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>

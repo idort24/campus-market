@@ -1,10 +1,13 @@
 ﻿<script setup>
-import { ref, reactive } from 'vue'
+import NavBar from '../components/NavBar.vue'
+import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { createProduct } from '../api/product.js'
 import { CATEGORIES, CONDITIONS } from '../data/products.js'
 
 const router = useRouter()
+const userInfo = computed(() => { try { return JSON.parse(localStorage.getItem('userInfo') || '{}') } catch { return {} } })
+const isAdmin = computed(() => userInfo.value?.roleCode === 'ADMIN')
 
 // 表单数据
 const form = reactive({
@@ -73,25 +76,7 @@ function onCancel() {
 <template>
   <div class="publish-page">
     <!-- 顶部导航 -->
-    <header class="navbar">
-      <div class="nav-inner">
-        <div class="logo" @click="router.push('/')">
-          <span class="logo-icon">🛍️</span><span class="logo-text">校园集市</span>
-        </div>
-        <nav class="nav-links">
-          <router-link to="/" exact-active-class="active">首页</router-link>
-          <router-link to="/product" active-class="active">商品市场</router-link>
-          <router-link to="/publish" active-class="active">发布商品</router-link>
-          <router-link to="/categories" active-class="active">分类浏览</router-link>
-          <router-link to="/ai" active-class="active">AI助手</router-link>
-          <router-link to="/profile" active-class="active">个人中心</router-link>
-          <router-link to="/admin" active-class="active">管理后台</router-link>
-        </nav>
-        <div class="nav-actions">
-          <router-link to="/publish" class="publish-btn">＋ 发布</router-link>
-        </div>
-      </div>
-    </header>
+    <NavBar :show-publish="false" />
 
     <!-- 表单主体 -->
     <main class="publish-container">

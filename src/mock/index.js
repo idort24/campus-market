@@ -50,7 +50,7 @@ export const mockApi = {
   // 收藏商品
   async addFavorite(goodsId) {
     await delay()
-    return { id: 999, goods_id: goodsId }
+    return { id: 999, goodsId }
   },
 
   // 取消收藏

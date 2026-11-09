@@ -1,5 +1,6 @@
 ﻿<script setup>
-import { ref, onMounted } from 'vue'
+import NavBar from '../components/NavBar.vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { fetchProductById } from '../api/product.js'
@@ -7,6 +8,8 @@ import { addFavorite, removeFavorite } from '../api/favorites.js'
 
 const route = useRoute()
 const router = useRouter()
+const userInfo = computed(() => { try { return JSON.parse(localStorage.getItem('userInfo') || '{}') } catch { return {} } })
+const isAdmin = computed(() => userInfo.value?.roleCode === 'ADMIN')
 
 const product = ref(null)
 const loading = ref(false)
@@ -53,25 +56,9 @@ function goBack() {
 <template>
   <div class="detail-page">
     <!-- 顶部导航 -->
-    <header class="navbar">
-      <div class="nav-inner">
-        <div class="logo" @click="$router.push('/')">
-          <span class="logo-icon">🛍️</span><span class="logo-text">校园集市</span>
-        </div>
-        <nav class="nav-links">
-          <router-link to="/" exact-active-class="active">首页</router-link>
-          <router-link to="/product" active-class="active">商品市场</router-link>
-          <router-link to="/publish" active-class="active">发布商品</router-link>
-          <router-link to="/categories" active-class="active">分类浏览</router-link>
-          <router-link to="/ai" active-class="active">AI助手</router-link>
-          <router-link to="/profile" active-class="active">个人中心</router-link>
-          <router-link to="/admin" active-class="active">管理后台</router-link>
-        </nav>
-        <div class="nav-actions">
-          <button class="back-btn" @click="goBack">← 返回</button>
-        </div>
-      </div>
-    </header>
+    <NavBar :show-publish="false">
+      <button class="back-btn" @click="goBack">← 返回</button>
+    </NavBar>
 
     <!-- 商品详情主体 -->
     <main class="detail-container">
