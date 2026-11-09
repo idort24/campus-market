@@ -1,12 +1,17 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import NavBar from '../components/NavBar.vue'
 import { ROOT_CATEGORIES } from '../data/categories.js'
+import { productList } from '../data/products.js'
 
 const router = useRouter()
 const search = ref('')
+
+// 首页"为你推荐"取商品列表前 4 条（真实数据源，不再在模板里写死卡片）
+const recommend = computed(() => productList.value.slice(0, 4))
+const REC_BG = ['#dbeafe', '#dcfce7', '#fef3c7', '#fce7f3']
 
 function doSearch() {
   router.push({ path: '/product', query: search.value ? { keyword: search.value } : {} })
@@ -34,7 +39,7 @@ onMounted(() => {
     <section class="hero">
       <div class="hero-inner">
         <h1>校园闲置，<em>就近淘</em></h1>
-        <p class="hero-sub">教材 · 数码 · 生活用品，同校交易更放心</p>
+        <p class="hero-sub">教材 · 电子产品 · 生活用品，同校交易更放心</p>
         <div class="search-bar">
           <input v-model="search" @keyup.enter="doSearch" placeholder="搜搜你想要的…" />
           <button @click="doSearch">搜索</button>
@@ -70,36 +75,17 @@ onMounted(() => {
         <router-link to="/product" class="more-link">查看全部 →</router-link>
       </div>
       <div class="goods-grid">
-        <div class="goods-card" @click="router.push('/product/1')">
-          <div class="goods-img" style="background:#dbeafe">📚</div>
+        <div
+          v-for="(p, i) in recommend"
+          :key="p.id"
+          class="goods-card"
+          @click="router.push(`/product/${p.id}`)"
+        >
+          <div class="goods-img" :style="{ background: REC_BG[i % 4] }">{{ p.icon }}</div>
           <div class="goods-body">
-            <div class="goods-title">高等数学教材 九成新</div>
-            <div class="goods-meta">教材书籍 · 图书馆旁</div>
-            <div class="goods-price">¥20 <del>¥45</del></div>
-          </div>
-        </div>
-        <div class="goods-card" @click="router.push('/product/2')">
-          <div class="goods-img" style="background:#dcfce7">🎧</div>
-          <div class="goods-body">
-            <div class="goods-title">蓝牙耳机 功能完好</div>
-            <div class="goods-meta">数码产品 · 宿舍区</div>
-            <div class="goods-price">¥50</div>
-          </div>
-        </div>
-        <div class="goods-card" @click="router.push('/product/3')">
-          <div class="goods-img" style="background:#fef3c7">🪑</div>
-          <div class="goods-body">
-            <div class="goods-title">宿舍椅子 结实耐用</div>
-            <div class="goods-meta">生活用品 · 生活区</div>
-            <div class="goods-price">¥30</div>
-          </div>
-        </div>
-        <div class="goods-card" @click="router.push('/product/4')">
-          <div class="goods-img" style="background:#fce7f3">⌨️</div>
-          <div class="goods-body">
-            <div class="goods-title">机械键盘 青轴</div>
-            <div class="goods-meta">数码产品 · 教学楼</div>
-            <div class="goods-price">¥80</div>
+            <div class="goods-title">{{ p.name }}</div>
+            <div class="goods-meta">{{ p.category }} · {{ p.location }}</div>
+            <div class="goods-price">¥{{ p.price }}</div>
           </div>
         </div>
       </div>

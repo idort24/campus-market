@@ -43,7 +43,7 @@ function handleNodeClick(data, node) {
   treeKey.value = data.id
 }
 
-// 从根到当前节点的路径，例如：数码产品 / 手机
+// 从根到当前节点的路径，例如：电子产品 / 手机
 function getPath(node) {
   const names = []
   let cur = node
