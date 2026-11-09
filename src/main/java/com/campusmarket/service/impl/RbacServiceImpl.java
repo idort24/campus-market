@@ -157,8 +157,7 @@ public class RbacServiceImpl implements RbacService {
     }
 
     @Override
-    public void bindDefaultRole(Long userId) {
-        SysRole student = roleMapper.selectOne(new LambdaQueryWrapper<SysRole>()
+    public void bindDefaultRole(Long userId) {        SysRole student = roleMapper.selectOne(new LambdaQueryWrapper<SysRole>()
                 .eq(SysRole::getRoleCode, "STUDENT"));
         if (student == null) {
             return;
@@ -172,6 +171,31 @@ public class RbacServiceImpl implements RbacService {
             ur.setRoleId(student.getId());
             userRoleMapper.insert(ur);
         }
+    }
+
+    @Override
+    public List<SysPermission> getUserMenus(Long userId) {
+        List<SysUserRole> urs = userRoleMapper.selectList(new LambdaQueryWrapper<SysUserRole>()
+                .eq(SysUserRole::getUserId, userId));
+        if (urs.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<Long> roleIds = urs.stream().map(SysUserRole::getRoleId).distinct().collect(Collectors.toList());
+        List<SysRolePermission> rps = rolePermMapper.selectList(new LambdaQueryWrapper<SysRolePermission>()
+                .in(SysRolePermission::getRoleId, roleIds));
+        if (rps.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<Long> permIds = rps.stream().map(SysRolePermission::getPermissionId)
+                .distinct().collect(Collectors.toList());
+        List<SysPermission> perms = permissionMapper.selectBatchIds(permIds);
+        // 只保留菜单类权限，并按 sort 升序，前端拿到的顺序即为展示顺序
+        return perms.stream()
+                .filter(p -> "MENU".equalsIgnoreCase(p.getPermType()))
+                .sorted((a, b) -> Integer.compare(
+                        a.getSort() == null ? 0 : a.getSort(),
+                        b.getSort() == null ? 0 : b.getSort()))
+                .collect(Collectors.toList());
     }
 
     @Override

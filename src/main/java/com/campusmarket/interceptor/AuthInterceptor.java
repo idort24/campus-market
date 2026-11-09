@@ -1,5 +1,7 @@
 package com.campusmarket.interceptor;
 
+import com.campusmarket.cache.CacheStore;
+import com.campusmarket.common.CacheKeys;
 import com.campusmarket.common.R;
 import com.campusmarket.service.RbacService;
 import com.campusmarket.utils.JwtUtil;
@@ -23,6 +25,9 @@ public class AuthInterceptor implements HandlerInterceptor {
     @Autowired
     private RbacService rbacService;
 
+    @Autowired
+    private CacheStore cacheStore;
+
     // 管理端接口要求的管理类权限，命中任一即放行
     private static final Set<String> ADMIN_PERMS = new HashSet<>(Arrays.asList(
             "user:manage", "user:status", "goods:audit", "report:handle", "category:manage", "dict:manage"
@@ -39,6 +44,11 @@ public class AuthInterceptor implements HandlerInterceptor {
         String token = authHeader.substring(7);
         if (JwtUtil.isTokenInvalid(token)) {
             writeJson(response, 401, "登录失效，请重新登录");
+            return false;
+        }
+        // 1.1 校验黑名单：用户退出登录后 token 虽未到期，但已不可再用
+        if (cacheStore.exists(CacheKeys.TOKEN_BLACK + token)) {
+            writeJson(response, 401, "登录已退出，请重新登录");
             return false;
         }
         Long userId = JwtUtil.getUserIdByToken(token);

@@ -17,6 +17,7 @@ public class SysUser {
     private Long id;
 
     private String studentNo;        // 学号 student_no
+    private String phone;            // 手机号 phone（注册必填，唯一索引）
     private String email;            // 邮箱
     private String password;         // 密码
     private String nickName;         // 昵称 nick_name
