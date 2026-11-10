@@ -82,7 +82,11 @@ public class GoodsController {
             @RequestParam(required = false) Long pageNum,
             @RequestParam(required = false) Long pageSize,
             @RequestParam(required = false) Long page,
-            @RequestParam(name = "page_size", required = false) Long pageSizeSnake
+            @RequestParam(name = "page_size", required = false) Long pageSizeSnake,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String kw,
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) String searchKey
     ) {
         // 兼容前端 page/page_size（下划线）与原有 pageNum/pageSize 两种分页参数
         long pn = page != null ? page : (pageNum != null ? pageNum : 1L);
@@ -94,12 +98,20 @@ public class GoodsController {
             ps = 10L;
         }
         Page<Goods> pageObj = new Page<>(pn, ps);
+        // 关键词搜索：keyword/kw/title/searchKey 任一非空即按 标题/描述 like 过滤
+        String kwText = keyword != null && !keyword.isBlank() ? keyword
+                : (kw != null && !kw.isBlank() ? kw
+                : (title != null && !title.isBlank() ? title : searchKey));
         // 公开列表只对外展示"审核通过 + 上架中"的商品；
         // 待审核/已驳回/已售出/下架商品不匿名暴露，后台审核走带权限的接口
-        IPage<Goods> pageData = goodsService.lambdaQuery()
+        var query = goodsService.lambdaQuery()
                 .eq(Goods::getAuditStatus, "PASS")
-                .eq(Goods::getGoodsStatus, "ON_SHELF")
-                .page(pageObj);
+                .eq(Goods::getGoodsStatus, "ON_SHELF");
+        if (kwText != null && !kwText.isBlank()) {
+            String like = "%" + kwText.trim() + "%";
+            query.and(w -> w.like(Goods::getTitle, like).or().like(Goods::getDescription, like));
+        }
+        IPage<Goods> pageData = query.page(pageObj);
         return R.ok(pageData);
     }
 
@@ -113,10 +125,14 @@ public class GoodsController {
             @RequestParam(required = false) Long pageSize,
             @RequestParam(required = false) Long page,
             @RequestParam(name = "page_size", required = false) Long pageSizeSnake,
-            @RequestParam(required = false) Long size
+            @RequestParam(required = false) Long size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String kw,
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) String searchKey
     ) {
         // 前端还传了 ?size=，一并兼容
-        return list(pageNum, pageSize != null ? pageSize : size, page, pageSizeSnake);
+        return list(pageNum, pageSize != null ? pageSize : size, page, pageSizeSnake, keyword, kw, title, searchKey);
     }
 
     /**
