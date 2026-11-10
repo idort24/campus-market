@@ -115,7 +115,7 @@ function goBack() {
             当前数据来自前端接口层（Mock 模式），接入后端后将读取真实商品数据。
           </div>
           <div v-else class="notice">
-            当前数据来自后端接口（GET /api/v1/goods/{id}），已与数据库实时同步。
+            当前数据来自后端接口（GET /api/v1/goods/detail/{id}），已与数据库实时同步。
           </div>
 
           <div class="detail-actions">

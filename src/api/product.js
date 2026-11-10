@@ -83,8 +83,9 @@ export async function fetchProducts(params = {}) {
     return list.map(normalizeGoods)
   }
 
-  // 真实后端：GET /api/v1/goods?keyword=&categoryId=&page=&pageSize=&sortField=&sortOrder=
-  const res = await http.get('/goods', { params })
+  // 真实后端：GET /api/v1/goods/list?keyword=&categoryId=&page=&pageSize=&sortField=&sortOrder=
+  // 注意是 /goods/list，不是 /goods——后端没有给 /goods 挂 GET 映射
+  const res = await http.get('/goods/list', { params })
   // 后端分页结构 {records,total,current,size}，非分页时可能是数组
   const list = Array.isArray(res) ? res : (res?.records || [])
   return list.map(normalizeGoods)
@@ -99,9 +100,10 @@ export async function fetchProductById(id) {
     const p = productList.value.find((x) => x.id === Number(id))
     return p ? normalizeGoods(p) : null
   }
-  // 真实后端：GET /api/v1/goods/{id}
+  // 真实后端：GET /api/v1/goods/detail/{id}
+  // 旧的 /goods/{id} 现在要求登录（匿名返回 code=401），详情接口已挪到 /goods/detail/{id}
   try {
-    const data = await http.get(`/goods/${id}`)
+    const data = await http.get(`/goods/detail/${id}`)
     return data ? normalizeGoods(data) : null
   } catch (e) {
     if (String(e).includes('404') || String(e).includes('不存在')) return null

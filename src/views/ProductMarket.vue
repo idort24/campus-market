@@ -30,7 +30,8 @@ const filteredProducts = computed(() => {
 async function loadProducts() {
   loading.value = true
   try {
-    products.value = await fetchProducts()
+    // 后端默认只返一页（pageSize=10），这里一次取满，避免总 21 条却只显示 10 条
+    products.value = await fetchProducts({ pageSize: 100 })
     // 收藏状态以后端为准（GET /goodsCollect/my），失败就留空集合，不影响列表展示
     try {
       const favs = await getFavorites()
