@@ -43,6 +43,32 @@ function offShelf(item) {
     .catch(() => {})
 }
 
+// 审核未通过的商品后端详情接口返回「商品不存在或未上架」，点进去只会看到空页
+// 这里提前提示，避免用户以为发布失败
+function viewItem(item) {
+  if (item.auditStatus === 'PENDING') {
+    ElMessage.warning('商品还在审核中，审核通过后才能查看详情')
+    return
+  }
+  if (item.auditStatus === 'REJECT') {
+    ElMessage.warning('商品审核未通过，修改后重新发布才能查看')
+    return
+  }
+  router.push(`/product/${item.id}`)
+}
+
+// 状态标签：审核中/未通过优先展示，审核通过后才显示上下架状态
+function statusText(item) {
+  if (item.auditStatus === 'PENDING') return '待审核'
+  if (item.auditStatus === 'REJECT') return '审核未通过'
+  return item.status === 'ON_SHELF' ? '已上架' : '已下架'
+}
+function statusClass(item) {
+  if (item.auditStatus === 'PENDING') return 'PENDING'
+  if (item.auditStatus === 'REJECT') return 'REJECT'
+  return item.status
+}
+
 function onShelf(item) {
   changeStatus(item, 'ON_SHELF')
 }
@@ -66,12 +92,14 @@ function onShelf(item) {
             <p class="desc">{{ item.description || item.category }}</p>
             <div class="goods-bottom">
               <span class="price">¥{{ item.price }}</span>
-              <span class="status-tag" :class="item.status">{{ item.status === 'ON_SHELF' ? '已上架' : '已下架' }}</span>
+              <span class="status-tag" :class="statusClass(item)">{{ statusText(item) }}</span>
             </div>
             <div class="actions">
-              <button class="view-btn" @click="router.push(`/product/${item.id}`)">查看</button>
-              <button v-if="item.status === 'ON_SHELF'" class="off-btn" @click="offShelf(item)">下架</button>
-              <button v-else class="on-btn" @click="onShelf(item)">上架</button>
+              <button class="view-btn" @click="viewItem(item)">查看</button>
+              <template v-if="item.auditStatus === 'PASS'">
+                <button v-if="item.status === 'ON_SHELF'" class="off-btn" @click="offShelf(item)">下架</button>
+                <button v-else class="on-btn" @click="onShelf(item)">上架</button>
+              </template>
             </div>
           </div>
         </div>
@@ -108,6 +136,8 @@ function onShelf(item) {
 .status-tag { font-size: 11px; padding: 2px 8px; border-radius: 10px; }
 .status-tag.ON_SHELF { background: #dcfce7; color: #166534; }
 .status-tag.OFF_SHELF { background: #f1f5f9; color: #64748b; }
+.status-tag.PENDING { background: #fef3c7; color: #92400e; }
+.status-tag.REJECT { background: #fee2e2; color: #b91c1c; }
 .actions { display: flex; gap: 8px; }
 .actions button { flex: 1; padding: 6px; border-radius: 8px; font-size: 12px; cursor: pointer; border: none; }
 .view-btn { background: #eff6ff; color: #2563eb; }
