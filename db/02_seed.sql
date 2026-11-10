@@ -48,14 +48,19 @@ INSERT IGNORE INTO `sys_permission` (`perm_code`, `perm_name`, `perm_type`, `par
 ('dict:manage',       '字典管理',   'API', 0, 'GET /api/v1/dicts',                   16);
 
 -- 2.2 MENU 类权限（前端路由菜单，perm_path 与 router/index.js 的路径保持一致）
+-- 共 11 条：学生端 6 条 + 后台 5 条，对齐 docs/api-auth.md 第四节
 INSERT IGNORE INTO `sys_permission` (`perm_code`, `perm_name`, `perm_type`, `parent_id`, `perm_path`, `sort`) VALUES
-('menu:user',     '用户管理', 'MENU', 0, '/admin/users',      21),
-('menu:goods',    '商品审核', 'MENU', 0, '/admin/goods',      22),
-('menu:report',   '举报处理', 'MENU', 0, '/admin/reports',    23),
-('menu:category', '分类管理', 'MENU', 0, '/admin/categories', 24),
-('menu:role',     '角色权限', 'MENU', 0, '/admin/roles',      25),
-('menu:my-goods', '我的发布', 'MENU', 0, '/my-publishes',     26),
-('menu:my-order', '我的订单', 'MENU', 0, '/my-orders',        27);
+('menu:user:product',   '商品集市', 'MENU', 0, '/product',           1),
+('menu:user:publish',   '发布闲置', 'MENU', 0, '/publish',           2),
+('menu:my-goods',       '我的发布', 'MENU', 0, '/my-publishes',     26),
+('menu:user:favorites', '我的收藏', 'MENU', 0, '/my-favorites',      4),
+('menu:my-order',       '我的订单', 'MENU', 0, '/my-orders',        27),
+('menu:user:ai',        '智能助手', 'MENU', 0, '/ai',                6),
+('menu:user',           '用户管理', 'MENU', 0, '/admin/users',      21),
+('menu:goods',          '商品审核', 'MENU', 0, '/admin/goods',      22),
+('menu:report',         '举报处理', 'MENU', 0, '/admin/reports',    23),
+('menu:category',       '分类管理', 'MENU', 0, '/admin/categories', 24),
+('menu:role',           '角色权限', 'MENU', 0, '/admin/roles',      25);
 
 -- ============================================================
 -- 三、角色-权限绑定
@@ -69,7 +74,7 @@ FROM `sys_role` r
 JOIN `sys_permission` p ON p.is_deleted = 0
 WHERE r.role_code = 'ADMIN' AND r.is_deleted = 0;
 
--- 3.2 STUDENT：基础买卖权限 10 条 + 用户端菜单 2 条
+-- 3.2 STUDENT：基础买卖权限 10 条 + 用户端菜单 6 条（共 16 条）
 INSERT IGNORE INTO `sys_role_permission` (`role_id`, `permission_id`)
 SELECT r.id, p.id
 FROM `sys_role` r
@@ -79,7 +84,8 @@ WHERE r.role_code = 'STUDENT' AND r.is_deleted = 0
     'goods:view', 'goods:publish', 'goods:edit', 'goods:delete', 'goods:status',
     'favorites:manage', 'order:manage', 'evaluation:create', 'message:send',
     'report:create',
-    'menu:my-goods', 'menu:my-order'
+    'menu:user:product', 'menu:user:publish', 'menu:my-goods',
+    'menu:user:favorites', 'menu:my-order', 'menu:user:ai'
   );
 
 -- ============================================================

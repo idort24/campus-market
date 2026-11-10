@@ -14,6 +14,7 @@
 | `04_upgrade_20261109.sql` | 已有旧库的增量修复（不改表结构） | 库里已有数据、不想重建时用 |
 | `05_demo_data.sql` | 24 条演示商品 + 分类统计快照（可重复执行） | 前端关掉 mock 后页面空白时跑，灌演示数据 |
 | `06_upgrade_phone_20261109.sql` | 给 `sys_user` 补 `phone` 列 + 唯一索引 | **仅存量库需要**；全新初始化不用跑（`01` 已含该列） |
+| `07_menu_permissions_20261109.sql` | 菜单权限从 7 条补到 11 条（学生 6 条 + 后台 5 条） | **仅存量库需要**；全新初始化不用跑（`02` 已含 11 条） |
 | `_backup_before_upgrade_20261109.sql` | 升级前的完整备份 | 出问题回滚用 |
 
 > 根目录那个 `campus_market.sql` 是旧文件，**不要再用**。它的测试账号密码密文被 PowerShell 的 `$` 变量解析截断成了 32 字符（完整应为 60 字符），拿它导入后登录必然失败。原因见第四节第 3 条。
@@ -46,12 +47,20 @@
 
 # 2. 补 sys_user.phone 列（只跑一次，ALTER 不可重复执行）
 & "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" --user=root --password=你的密码 --default-character-set=utf8mb4 -e "source D:/files/cm/db/06_upgrade_phone_20261109.sql"
+
+# 3. 菜单权限补到 11 条（可重复执行）
+& "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" --user=root --password=你的密码 --default-character-set=utf8mb4 --table -e "source D:/files/cm/db/07_menu_permissions_20261109.sql"
 ```
 
 `04` 只做三件事：修 `user_type`、补账号状态字典、补 7 条菜单权限。不改任何表结构、不删业务数据，可重复执行。
 
 `06` 是 2026-11-09 前端联调时补的：后端 `SysUser` 实体有 `phone` 字段，建表时漏了，导致所有登录请求报
 `Unknown column 'phone' in 'field list'` 直接 500。跑完 `06` 登录才恢复。
+
+`07` 补的是另外 4 条学生端菜单（`menu:user:product` `/product`、`menu:user:publish` `/publish`、
+`menu:user:favorites` `/my-favorites`、`menu:user:ai` `/ai`）。补完 `sys_permission` 的 MENU 从 7 条变 11 条，
+管理员拿到全部 11 条、学生拿 6 条，`GET /api/v1/user/menus` 才返回完整菜单（此前接口能通但列表缺项）。
+这 4 条路径对应 `campus-market/src/router/index.js` 里真实存在的路由，前端页面都已到位，缺的只是库里的数据。
 
 ---
 
