@@ -1,7 +1,6 @@
 @startuml
 title campus-market 校园二手集市 系统架构
-left to right direction
-scale 3
+scale 2
 
 skinparam shadowing false
 skinparam defaultFontName "Microsoft YaHei"

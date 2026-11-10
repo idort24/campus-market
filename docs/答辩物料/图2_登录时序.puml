@@ -1,10 +1,9 @@
 @startuml
 title 登录与鉴权时序（验证码 · 限流 · 黑名单 · 权限菜单）
 autonumber
-scale 3
+scale 2
 skinparam shadowing false
 skinparam defaultFontName "Microsoft YaHei"
-skinparam sequenceMessageAlign left
 
 participant "前端\nLogin.vue" as FE
 participant "AuthController\n/api/v1/auth" as AC
@@ -17,7 +16,7 @@ database "MySQL" as DB
 FE -> AC : POST /api/v1/auth/captcha
 activate AC
 AC -> AC : 生成 4 位验证码
-AC -> R : SET captcha:{key} = 验证码  TTL 60 秒
+AC -> R : SET captcha:{key}\n验证码，TTL 60 秒
 AC --> FE : data{captchaKey, imageBase64}
 deactivate AC
 
@@ -32,11 +31,11 @@ else 验证码不匹配
   UC --> FE : code≠1  验证码错误
 else 验证通过
   UC -> R : DEL captcha:{key}  一次性作废
-  UC -> R : INCR login:limit:phone:{phone}  TTL 60 秒
+  UC -> R : INCR login:limit:phone:{phone}\nTTL 60 秒
   alt 60 秒内超过 5 次
     UC --> FE : code≠1  操作过于频繁，请稍后再试
   else 未超限
-    UC -> DB : 查 sys_user 并按 BCrypt 校验密码
+    UC -> DB : 查 sys_user\nBCrypt 校验密码
     UC -> DB : 查角色与权限码
     UC -> UC : 签发 JWT
     UC --> FE : {code:1, data:{token, user, roles, perms}}
