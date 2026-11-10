@@ -104,7 +104,22 @@ public class GoodsController {
     }
 
     /**
-     * 商品详情
+     * 商品详情（公开，游客可看）
+     *
+     * 路径独立成 /goods/detail/{id}，白名单放行；
+     * 只展示审核通过的商品，未审核/已下架不暴露。
+     */
+    @GetMapping("/detail/{id}")
+    public R<Goods> publicDetail(@PathVariable Long id) {
+        Goods goods = goodsService.getById(id);
+        if (goods == null || !"PASS".equals(goods.getAuditStatus())) {
+            return R.fail("商品不存在或未上架");
+        }
+        return R.ok(goods);
+    }
+
+    /**
+     * 商品详情（需登录）
      */
     @GetMapping("/{id}")
     public R<Goods> getDetail(@PathVariable Long id) {
