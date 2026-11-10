@@ -94,12 +94,32 @@ public class GoodsController {
             ps = 10L;
         }
         Page<Goods> pageObj = new Page<>(pn, ps);
-        IPage<Goods> pageData = goodsService.page(pageObj);
+        // 公开列表只对外展示"审核通过 + 上架中"的商品；
+        // 待审核/已驳回/已售出/下架商品不匿名暴露，后台审核走带权限的接口
+        IPage<Goods> pageData = goodsService.lambdaQuery()
+                .eq(Goods::getAuditStatus, "PASS")
+                .eq(Goods::getGoodsStatus, "ON_SHELF")
+                .page(pageObj);
         return R.ok(pageData);
     }
 
     /**
-     * 商品详情
+     * 商品详情（公开，游客可看）
+     *
+     * 路径独立成 /goods/detail/{id}，白名单放行；
+     * 只展示审核通过的商品，未审核/已下架不暴露。
+     */
+    @GetMapping("/detail/{id}")
+    public R<Goods> publicDetail(@PathVariable Long id) {
+        Goods goods = goodsService.getById(id);
+        if (goods == null || !"PASS".equals(goods.getAuditStatus())) {
+            return R.fail("商品不存在或未上架");
+        }
+        return R.ok(goods);
+    }
+
+    /**
+     * 商品详情（需登录）
      */
     @GetMapping("/{id}")
     public R<Goods> getDetail(@PathVariable Long id) {
@@ -124,5 +144,31 @@ public class GoodsController {
                 .eq(Goods::getSellerId, userId)
                 .page(page);
         return R.ok(pageData);
+    }
+
+    /**
+     * 商品上下架（仅自己发布的商品）
+     *
+     * PUT /api/v1/goods/{id}/status?status=ON_SHELF|OFF_SHELF
+     * SOLD 状态由订单流程触发，这里不允许手动改。
+     */
+    @PutMapping("/{id}/status")
+    public R changeStatus(@PathVariable Long id, @RequestParam String status) {
+        Long userId = UserContext.getUserId();
+        Goods goods = goodsService.getById(id);
+        if (goods == null) {
+            return R.fail("商品不存在");
+        }
+        if (!goods.getSellerId().equals(userId)) {
+            return R.fail("无权操作别人的商品");
+        }
+        if (!"ON_SHELF".equals(status) && !"OFF_SHELF".equals(status)) {
+            return R.error(400, "status 只能是 ON_SHELF（上架）或 OFF_SHELF（下架）");
+        }
+        Goods upd = new Goods();
+        upd.setId(id);
+        upd.setGoodsStatus(status);
+        goodsService.updateById(upd);
+        return R.ok("操作成功");
     }
 }
