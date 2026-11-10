@@ -2,6 +2,7 @@ package com.campusmarket.controller;
 
 import com.campusmarket.common.R;
 import com.campusmarket.cache.CacheStore;
+import com.campusmarket.common.CacheKeys;
 import com.campusmarket.entity.SysUser;
 import com.campusmarket.service.CaptchaService;
 import com.campusmarket.service.RbacService;
@@ -67,6 +68,14 @@ public class SysUserController {
         }
         String password = param.get("password");
 
+        // 登录失败限流：同一账号 60 秒内错 5 次就锁窗口，防脚本撞密码
+        String failKey = CacheKeys.LOGIN_FAIL + account;
+        String failStr = cacheStore.get(failKey);
+        int failCount = failStr == null ? 0 : Integer.parseInt(failStr);
+        if (failCount >= 5) {
+            return R.error(429, "登录失败次数过多，请 1 分钟后再试");
+        }
+
         boolean smsLogin = false;
         // 验证码校验（反爬第一道闸）：一次性使用，校验完即失效
         if (captchaEnabled) {
@@ -102,10 +111,12 @@ public class SysUserController {
 
         // 统一提示文案，避免通过错误信息判断"该学号是否已注册"（防账号枚举）
         if(user == null){
+            cacheStore.set(failKey, String.valueOf(failCount + 1), 60);
             return R.fail("账号或密码错误");
         }
         // 密码登录才校验 BCrypt；短信登录凭验证码即视为本人
         if (!smsLogin && !PasswordUtil.matches(password, user.getPassword())) {
+            cacheStore.set(failKey, String.valueOf(failCount + 1), 60);
             return R.fail("账号或密码错误");
         }
 
@@ -114,6 +125,9 @@ public class SysUserController {
         if (!"NORMAL".equalsIgnoreCase(user.getAccountStatus())) {
             return R.error(403, "账号状态异常（" + user.getAccountStatus() + "），请联系管理员");
         }
+
+        // 登录成功，清掉失败计数
+        cacheStore.delete(failKey);
 
         // 记录最后登录时间：该字段建表时有，但此前从未写入，后台看板一直为空
         SysUser loginRecord = new SysUser();
