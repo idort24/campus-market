@@ -104,6 +104,30 @@ public class GoodsController {
     }
 
     /**
+     * REST 风格别名：GET /api/v1/goods = GET /api/v1/goods/list
+     * 前端按 REST 约定打根路径，这里兼容一下，逻辑完全复用 list()。
+     */
+    @GetMapping
+    public R<IPage<Goods>> listRoot(
+            @RequestParam(required = false) Long pageNum,
+            @RequestParam(required = false) Long pageSize,
+            @RequestParam(required = false) Long page,
+            @RequestParam(name = "page_size", required = false) Long pageSizeSnake,
+            @RequestParam(required = false) Long size
+    ) {
+        // 前端还传了 ?size=，一并兼容
+        return list(pageNum, pageSize != null ? pageSize : size, page, pageSizeSnake);
+    }
+
+    /**
+     * REST 风格别名：POST /api/v1/goods = POST /api/v1/goods/add
+     */
+    @PostMapping
+    public R addRoot(@RequestBody Goods goods) {
+        return add(goods);
+    }
+
+    /**
      * 商品详情（公开，游客可看）
      *
      * 路径独立成 /goods/detail/{id}，白名单放行；
