@@ -200,7 +200,7 @@ const titleText = computed(() => {
               <input
                 v-model="form.captchaCode"
                 class="captcha-input"
-                placeholder="输入右侧 4 位字符"
+                placeholder="请输入验证码"
                 maxlength="6"
                 @keyup.enter="submitPassword"
               />
@@ -242,7 +242,7 @@ const titleText = computed(() => {
             {{ loading ? '登录中…' : '登 录' }}
           </button>
 
-          <p class="bottom-tip">演示手机号：13800000008（管理员）/ 开发期验证码会直接提示在页面上</p>
+          <p class="bottom-tip">演示手机号：13800000002（学生）/ 13800000008（管理员）/ 开发期验证码会直接提示在页面上</p>
         </form>
 
         <!-- ========== 扫码登录（占位） ========== -->

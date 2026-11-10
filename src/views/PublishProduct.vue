@@ -3,6 +3,7 @@ import NavBar from '../components/NavBar.vue'
 import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { createProduct } from '../api/product.js'
+import { USE_MOCK } from '../api/config.js'
 import { CATEGORIES, CONDITIONS } from '../data/products.js'
 
 const router = useRouter()
@@ -167,8 +168,11 @@ function onCancel() {
         </div>
       </form>
 
-      <p class="tip">
+      <p v-if="USE_MOCK" class="tip">
         💡 当前为 Mock 模式，商品先写入前端内存数据；接入后端后自动保存到服务器数据库。
+      </p>
+      <p v-else class="tip">
+        💡 当前已接入真实后端（POST /api/v1/goods），发布后需管理员审核通过才会在商品市场展示。
       </p>
     </main>
   </div>

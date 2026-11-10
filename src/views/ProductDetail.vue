@@ -4,6 +4,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { fetchProductById } from '../api/product.js'
+import { USE_MOCK } from '../api/config.js'
 import { addFavorite, removeFavorite, hasFavorite } from '../api/favorites.js'
 
 const route = useRoute()
@@ -110,8 +111,11 @@ function goBack() {
           </div>
 
           <!-- 提示信息 -->
-          <div class="notice">
+          <div v-if="USE_MOCK" class="notice">
             当前数据来自前端接口层（Mock 模式），接入后端后将读取真实商品数据。
+          </div>
+          <div v-else class="notice">
+            当前数据来自后端接口（GET /api/v1/goods/{id}），已与数据库实时同步。
           </div>
 
           <div class="detail-actions">

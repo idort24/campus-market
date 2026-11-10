@@ -2,13 +2,15 @@
 // 后续接入后端时，这个文件里的数据会被 src/api/product.js 里的真实接口替换。
 import { ref } from 'vue'
 import { CATEGORY_OPTIONS, iconOfCategory } from './categories.js'
+import { QUALITY_OPTIONS } from './dict.js'
 
 // 全部分类（发布表单和筛选按钮共用）
 // 分类名称以数据库 goods_category 表为准，统一从 data/categories.js 导出，不在这里另写一份
 export const CATEGORIES = CATEGORY_OPTIONS
 
-// 商品成色可选项
-export const CONDITIONS = ['全新', '几乎全新', '九成新', '八成新', '七成及以下']
+// 商品成色可选项：与库 dict_data.goods_quality 对齐（全新/九成新/八成新/七成新/有磨损）
+// 不再另立一套"几乎全新""七成及以下"，避免发布时传了库字典里没有的值
+export const CONDITIONS = QUALITY_OPTIONS
 
 // 商品列表（响应式）：发布新商品后，所有用到它的页面会自动更新
 export const productList = ref([

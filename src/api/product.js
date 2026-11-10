@@ -19,7 +19,7 @@
 import http from './http'
 import { USE_MOCK } from './config'
 import { productList, addProductLocally } from '../data/products.js'
-import { QUALITY_MAP } from '../data/dict.js'
+import { QUALITY_MAP, QUALITY_CODE_BY_TEXT } from '../data/dict.js'
 import { CATEGORY_NAME_BY_ID, CATEGORY_ID_BY_NAME, iconOfCategory } from '../data/categories.js'
 
 const delay = (ms = 120) => new Promise((r) => setTimeout(r, ms))
@@ -151,12 +151,16 @@ export async function createProduct(form) {
   // 真实后端：POST /api/v1/goods
   // 表单里给的是中文分类名，这里转成后端要的 categoryId
   const categoryId = form.categoryId ?? CATEGORY_ID_BY_NAME[form.category] ?? null
+  // 表单里成色也是中文（form.condition），后端 goods.quality 存字典码值（NEW/90/80/70/USED）
+  const quality =
+    QUALITY_CODE_BY_TEXT[form.condition] ??
+    (form.quality ? QUALITY_CODE_BY_TEXT[form.quality] ?? form.quality : '90')
   const payload = {
     title: form.name,
     price: Number(form.price),
     categoryId,
     description: form.description ?? '',
-    quality: form.quality ?? '90',
+    quality,
     tradePlace: form.location ?? '',
     images: form.images ?? [],
   }

@@ -39,14 +39,27 @@ const userInfo = computed(() => {
 const isLoggedIn = computed(() => !!token.value)
 const displayName = computed(() => userInfo.value?.nickName || userInfo.value?.studentNo || '')
 
+// 管理类权限码（与 router 守卫里的 ADMIN_PERMS 保持一致）
+// 学生也会有一批业务权限码（goods:publish / favorites:manage 等），不能因为"有权限码"就判定成管理员
+const ADMIN_PERMS = [
+  'user:manage',
+  'user:status',
+  'goods:audit',
+  'report:handle',
+  'category:manage',
+  'dict:manage',
+]
+
 function hasAdminEntry() {
   // 后端菜单里明确下发了 /admin
   try {
     const cached = JSON.parse(localStorage.getItem(LS_MENUS) || '[]')
     if (Array.isArray(cached) && cached.some((m) => m && m.path === '/admin')) return true
   } catch { /* ignore */ }
-  // 或者账号本身具备管理权限
-  return isAdmin() || getUserPerms().length > 0
+  // ADMIN 角色
+  if (isAdmin()) return true
+  // 或具备管理类权限码之一
+  return getUserPerms().some((p) => ADMIN_PERMS.includes(p))
 }
 
 // 已登录 → 基础菜单 + 管理后台（若有权限）；未登录 → 仅基础菜单
