@@ -22,7 +22,8 @@ public class Goods {
     private String description;      // 商品描述 description
     private BigDecimal price;        // 售价 price，decimal(10,2)
     private String quality;          // 成色 quality，字典取值
-    private String images;           // 图片OSS地址数组 images，json ["url1","url2"]    private String tradePlace;       // 线下交易地点 trade_place
+    private String images;           // 图片OSS地址数组 images，json ["url1","url2"]
+    private String tradePlace;       // 线下交易地点 trade_place
     private Integer canBargain;      // 是否可议价 can_bargain，0否 1是
     private String auditStatus;      // 审核状态 audit_status，待审核/审核通过/审核驳回
     private String goodsStatus;      // 商品状态 goods_status，上架/下架/已售出
