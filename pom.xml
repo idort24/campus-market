@@ -88,6 +88,13 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Redis：周泓颖接 Redis 缓存用，版本走 parent 不写死；
+             cache.store=memory（默认）时不连 Redis，仅引入依赖不影响启动 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
 
     </dependencies>
 

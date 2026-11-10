@@ -15,7 +15,15 @@ spring:
     # 关键点：末尾加了 allowPublicKeyRetrieval=true，解决连接报错
     url: jdbc:mysql://localhost:3306/campus_market?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
     username: root
-    password: sys20261013
+    password: Root123456  # 换成你自己的数据库密码！！！
+  # Redis：cache.store=redis 时才真正连；配 memory 时即使本机没起 Redis 也不影响启动
+  data:
+    redis:
+      host: localhost
+      # 本机 6379 被火把节项目的 huobajie-redis 占用，campus-redis 映射在 6380
+      port: 6380
+      database: 0
+      timeout: 3000ms
 
 # 文件存储根目录（分片临时目录 staging + 最终目录 final）
 file:
@@ -28,6 +36,10 @@ jwt:
   secret: ${JWT_SECRET:abcdefghijklmnopqrstuvwxyz123456abcdefghijklmnopqrstuvwxyz123456}
   # token 有效期（小时）
   expire-hours: 2
+
+# 缓存实现选择：memory（默认，重启即失，答辩兜底） | redis（周泓颖接好后切换）
+cache:
+  store: memory
 
 mybatis-plus:
   configuration:

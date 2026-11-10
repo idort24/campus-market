@@ -1,20 +1,20 @@
 package com.campusmarket.cache;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 内存版缓存实现（开发期兜底）
+ * 内存版缓存实现（默认兜底）
  *
- * 说明：
- * - 单一 Spring 容器内有效，服务重启即失效；
- * - 多实例部署不共享，仅用于本机开发与联调；
- * - 周泓颖接入 Redis 后新增 RedisCacheStore 并标注 @Primary，
- *   本类会自动降级为备用实现，无需改业务代码。
+ * 生效条件：cache.store=memory 或不配（默认）。
+ * RedisCacheStore 与之互斥生效，同一时刻容器里只有一个 CacheStore 实现，
+ * 业务代码按接口注入，不需要 @Primary 也不会有多个候选冲突。
  */
 @Component
+@ConditionalOnProperty(name = "cache.store", havingValue = "memory", matchIfMissing = true)
 public class InMemoryCacheStore implements CacheStore {
 
     /** 缓存条目：value + 过期时间戳（毫秒），0 表示不过期 */
