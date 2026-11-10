@@ -8,7 +8,7 @@
 const BASE = '/api/v1/file'
 
 // 后端统一返回结构 R<T> = { code, msg, data }
-// 成功 code=200（R.ok）；业务错误 code=1001（缺片）；HTTP 层失败走非 2xx
+// 成功 code=1（R.ok）；业务错误 code=500；未登录 401；无权限 403；HTTP 层失败走非 2xx
 
 /** 通用请求：解析 R 结构，业务失败抛异常 */
 async function request(url, options) {
