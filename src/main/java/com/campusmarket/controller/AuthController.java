@@ -43,6 +43,14 @@ public class AuthController {
     private boolean captchaEnabled;
 
     /**
+     * 开发期模拟短信通道是否把验证码明文回传到响应体 data.devCode。
+     * 默认 false：只打控制台日志，响应里不带 devCode，避免"知道手机号就能拿验证码登任意账号"。
+     * 自动化测试 / 现场演示临时设 auth.sms.dev-echo=true（或环境变量）打开。
+     */
+    @Value("${auth.sms.dev-echo:false}")
+    private boolean smsDevEcho;
+
+    /**
      * 获取图形验证码 POST /api/v1/auth/captcha
      *
      * 返回 { captchaKey, imageBase64, expireIn }
@@ -55,9 +63,9 @@ public class AuthController {
     /**
      * 开发期模拟短信通道 POST /api/v1/auth/sms/code
      *
-     * 请求体 { phone }，返回 { captchaKey, expireIn, devCode }。
-     * 开发期没有真实短信网关，验证码直接打在控制台 + 放进 data.devCode，
-     * 联调时前端从输入框读，答辩时可解释为"接入云短信网关时只改这一层"。
+     * 请求体 { phone }，返回 { captchaKey, expireIn, devCode? }。
+     * 开发期没有真实短信网关，验证码只打在控制台；只有 auth.sms.dev-echo=true 时，
+     * 才把 devCode 明文放进响应体供联调/演示读取，默认关闭。
      * 缓存 5 分钟，一次性使用。
      */
     @PostMapping("/sms/code")
@@ -75,7 +83,9 @@ public class AuthController {
         java.util.Map<String, Object> data = new java.util.HashMap<>();
         data.put("captchaKey", key);
         data.put("expireIn", 300);
-        data.put("devCode", code);
+        if (smsDevEcho) {
+            data.put("devCode", code);
+        }
         return R.ok(data);
     }
 

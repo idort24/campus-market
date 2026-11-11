@@ -37,6 +37,16 @@ jwt:
   # token 有效期（小时）
   expire-hours: 2
 
+# 认证相关开关
+auth:
+  captcha:
+    # 是否强制校验图形/短信验证码；联调期可临时 false，生产必须 true
+    enabled: true
+  sms:
+    # 模拟短信通道是否把验证码明文回传到响应体 devCode；默认 false（只打日志），
+    # 自动化测试/现场演示临时 true 打开，生产关闭，避免知道手机号即可登任意账号
+    dev-echo: false
+
 # 缓存实现选择：memory（默认，重启即失，答辩兜底） | redis（周泓颖接好后切换）
 cache:
   store: memory
