@@ -43,9 +43,9 @@ public class AuthController {
     private boolean captchaEnabled;
 
     /**
-     * 开发期模拟短信通道是否把验证码明文回传到响应体 data.devCode。
-     * 默认 false：只打控制台日志，响应里不带 devCode，避免"知道手机号就能拿验证码登任意账号"。
-     * 自动化测试 / 现场演示临时设 auth.sms.dev-echo=true（或环境变量）打开。
+     * 开发期模拟短信通道总开关 auth.sms.dev-echo，默认 false。
+     * 关闭时：响应不带 devCode（只打日志），且 /user/login 的短信分支直接拒绝；
+     * 打开时：devCode 回传、短信登录放行。自动化测试 / 现场演示临时开，生产关闭。
      */
     @Value("${auth.sms.dev-echo:false}")
     private boolean smsDevEcho;

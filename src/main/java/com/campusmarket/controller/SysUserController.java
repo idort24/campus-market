@@ -49,6 +49,13 @@ public class SysUserController {
     @Value("${auth.captcha.enabled:true}")
     private boolean captchaEnabled;
 
+    /**
+     * 模拟短信通道开关，与 AuthController 共用同一个配置 auth.sms.dev-echo。
+     * 默认 false：短信登录分支直接拒绝；true 时才放行短信验证码登录（联调/演示临时开）。
+     */
+    @Value("${auth.sms.dev-echo:false}")
+    private boolean smsDevEcho;
+
     // 查询全部用户接口 GET /api/v1/user/list
     @GetMapping("/list")
     public R<List<SysUser>> list() {
@@ -94,6 +101,11 @@ public class SysUserController {
                     return R.error(400, "验证码错误或已失效，请刷新后重试");
                 }
             }
+        }
+
+        // 短信通道开关关闭时，短信登录分支直接拒绝；不能只把 devCode 藏起来，否则 6 位码仍可被撞
+        if (smsLogin && !smsDevEcho) {
+            return R.fail("短信登录未启用");
         }
 
         SysUser user;

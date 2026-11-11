@@ -359,7 +359,7 @@ dict:manage
 ## 短信验证码登录（2026-11-09 补，开发期模拟通道）
 
 - 发短信：`POST /api/v1/auth/sms/code`，body `{phone}`，默认返回 `{captchaKey, expireIn}`。验证码只打控制台日志；开关 `auth.sms.dev-echo=true`（默认 false）时才把 6 位码明文放进 `data.devCode` 供联调/演示读取，生产保持关闭。接云短信时只改这一层。
-- 登录：`POST /api/v1/user/login`，短信分支传 `{username: 手机号, captchaKey: "sms:{手机号}", captchaCode: 6位码}`，不再传密码；账号按手机号查。
+- 登录：`POST /api/v1/user/login`，短信分支传 `{username: 手机号, captchaKey: "sms:{手机号}", captchaCode: 6位码}`，不再传密码；账号按手机号查。开关关闭时短信登录分支直接返回"短信登录未启用"，不只是隐藏 devCode。
 - 验证码一次性，TTL 5 分钟；重放/错码均 400。
 - 已放行 `/api/v1/auth/sms/code`，不需要 token。
 
