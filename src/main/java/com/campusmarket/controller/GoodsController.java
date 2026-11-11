@@ -147,12 +147,15 @@ public class GoodsController {
      * 商品详情（公开，游客可看）
      *
      * 路径独立成 /goods/detail/{id}，白名单放行；
-     * 只展示审核通过的商品，未审核/已下架不暴露。
+     * 口径与公开列表一致：只暴露审核通过且上架中的商品，
+     * 待审核/已驳回/已售出/下架商品不匿名暴露。卖家本人查看自己的非上架商品走需登录的 /goods/{id}。
      */
     @GetMapping("/detail/{id}")
     public R<Goods> publicDetail(@PathVariable Long id) {
         Goods goods = goodsService.getById(id);
-        if (goods == null || !"PASS".equals(goods.getAuditStatus())) {
+        if (goods == null
+                || !"PASS".equals(goods.getAuditStatus())
+                || !"ON_SHELF".equals(goods.getGoodsStatus())) {
             return R.fail("商品不存在或未上架");
         }
         return R.ok(goods);
