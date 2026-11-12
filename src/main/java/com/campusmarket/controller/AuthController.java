@@ -10,12 +10,15 @@ import com.campusmarket.utils.JwtUtil;
 import com.campusmarket.utils.PasswordUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -49,6 +52,17 @@ public class AuthController {
      */
     @Value("${auth.sms.dev-echo:false}")
     private boolean smsDevEcho;
+
+    /** 邮件发送器：未配置发件邮箱/授权码时注入为空，发码兜底走控制台日志，不影响启动 */
+    @Autowired(required = false)
+    private JavaMailSender mailSender;
+
+    @Value("${spring.mail.username:}")
+    private String mailFrom;
+
+    /** 邮箱验证码是否在响应体回显 devCode（联调/演示用），默认 false */
+    @Value("${auth.email.dev-echo:false}")
+    private boolean emailDevEcho;
 
     /**
      * 获取图形验证码 POST /api/v1/auth/captcha
@@ -84,6 +98,50 @@ public class AuthController {
         data.put("captchaKey", key);
         data.put("expireIn", 300);
         if (smsDevEcho) {
+            data.put("devCode", code);
+        }
+        return R.ok(data);
+    }
+
+    /**
+     * 邮箱验证码 POST /api/v1/auth/email/code
+     *
+     * 请求体 { email }，返回 { captchaKey, expireIn, devCode? }。
+     * 走免费 SMTP（QQ 邮箱授权码）真实发信；授权码未配置或发送失败时，
+     * 验证码只打在控制台兜底，不阻断本地联调。缓存 5 分钟，一次性使用。
+     */
+    @PostMapping("/email/code")
+    public R<Map<String, Object>> emailCode(@RequestBody Map<String, String> param) {
+        String email = param.get("email");
+        if (email == null || !email.matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+            return R.error(400, "请输入正确的邮箱");
+        }
+        String code = String.format("%06d", new java.util.Random().nextInt(1_000_000));
+        String key = CacheKeys.EMAIL_CODE + email;
+        cacheStore.set(key, code, 300);
+
+        boolean sent = false;
+        if (mailSender != null && mailFrom != null && !mailFrom.trim().isEmpty()) {
+            try {
+                SimpleMailMessage message = new SimpleMailMessage();
+                message.setFrom(mailFrom);
+                message.setTo(email);
+                message.setSubject("校园集市 · 邮箱验证码");
+                message.setText("您正在登录校园集市，验证码：" + code + "，5 分钟内有效，请勿泄露给他人。");
+                mailSender.send(message);
+                sent = true;
+            } catch (Exception e) {
+                System.out.println("[EMAIL-CODE] 邮件发送失败 email=" + email + " err=" + e.getMessage());
+            }
+        }
+        if (!sent) {
+            System.out.println("[EMAIL-CODE] 开发期邮箱验证码 email=" + email + " code=" + code);
+        }
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("captchaKey", key);
+        data.put("expireIn", 300);
+        if (emailDevEcho) {
             data.put("devCode", code);
         }
         return R.ok(data);

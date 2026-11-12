@@ -84,6 +84,7 @@ public class SysUserController {
         }
 
         boolean smsLogin = false;
+        boolean emailLogin = false;
         // 验证码校验（反爬第一道闸）：一次性使用，校验完即失效
         if (captchaEnabled) {
             String captchaKey = param.get("captchaKey");
@@ -96,6 +97,14 @@ public class SysUserController {
                 }
                 cacheStore.delete(captchaKey);
                 smsLogin = true;
+            } else if (captchaKey != null && captchaKey.startsWith("email:")) {
+                // 邮箱登录分支：captchaKey = email:{邮箱}，走邮箱验证码
+                String expected = cacheStore.get(captchaKey);
+                if (expected == null || !expected.equals(captchaCode)) {
+                    return R.error(400, "邮箱验证码错误或已过期");
+                }
+                cacheStore.delete(captchaKey);
+                emailLogin = true;
             } else {
                 if (!captchaService.verify(captchaKey, captchaCode)) {
                     return R.error(400, "验证码错误或已失效，请刷新后重试");
@@ -114,6 +123,11 @@ public class SysUserController {
             user = sysUserService.lambdaQuery()
                     .eq(SysUser::getPhone, account)
                     .one();
+        } else if (emailLogin) {
+            // 邮箱登录：按邮箱找账号
+            user = sysUserService.lambdaQuery()
+                    .eq(SysUser::getEmail, account)
+                    .one();
         } else {
             // 密码登录：按学号找账号
             user = sysUserService.lambdaQuery()
@@ -126,8 +140,8 @@ public class SysUserController {
             cacheStore.set(failKey, String.valueOf(failCount + 1), 60);
             return R.fail("账号或密码错误");
         }
-        // 密码登录才校验 BCrypt；短信登录凭验证码即视为本人
-        if (!smsLogin && !PasswordUtil.matches(password, user.getPassword())) {
+        // 密码登录才校验 BCrypt；短信/邮箱登录凭验证码即视为本人
+        if (!smsLogin && !emailLogin && !PasswordUtil.matches(password, user.getPassword())) {
             cacheStore.set(failKey, String.valueOf(failCount + 1), 60);
             return R.fail("账号或密码错误");
         }

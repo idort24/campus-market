@@ -13,6 +13,9 @@ public final class CacheKeys {
     /** 图形验证码：captcha:{captchaKey} -> 正确答案，TTL 60 秒 */
     public static final String CAPTCHA = "captcha:";
 
+    /** 邮箱验证码：email:{邮箱} -> 6 位验证码，TTL 300 秒 */
+    public static final String EMAIL_CODE = "email:";
+
     /** token 黑名单：token:black:{token} -> 拉黑时间戳，TTL = token 剩余有效期 */
     public static final String TOKEN_BLACK = "token:black:";
 

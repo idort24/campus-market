@@ -24,6 +24,22 @@ spring:
       port: 6380
       database: 0
       timeout: 3000ms
+  # 邮件：邮箱验证码登录，QQ 邮箱 SMTP。授权码通过环境变量 MAIL_AUTH_CODE 注入，
+  # 不要把真实授权码提交进仓库；留空时发码接口兜底走控制台日志，不影响本地启动
+  mail:
+    host: smtp.qq.com
+    port: 465
+    username: 702203337@qq.com
+    password: ${MAIL_AUTH_CODE:}
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+          socketFactory:
+            port: 465
 
 # 文件存储根目录（分片临时目录 staging + 最终目录 final）
 file:
@@ -45,6 +61,9 @@ auth:
   sms:
     # 模拟短信通道总开关，默认 false：响应不回 devCode（只打日志），且登录短信分支直接拒绝；
     # true 时 devCode 回传、短信登录放行。自动化测试/现场演示临时开，生产关闭
+    dev-echo: false
+  email:
+    # 邮箱验证码是否在响应体回显 devCode（联调/演示用）；默认 false，真实环境关闭
     dev-echo: false
 
 # 缓存实现选择：memory（默认，重启即失，答辩兜底） | redis（周泓颖接好后切换）

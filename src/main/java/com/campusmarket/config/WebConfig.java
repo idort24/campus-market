@@ -23,6 +23,7 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/v1/user/register",
                         "/api/v1/auth/captcha",
                         "/api/v1/auth/sms/code",
+                        "/api/v1/auth/email/code",
                         "/api/v1/auth/password/reset",
                         // 只放行公开列表与公开详情；其余 goods 路径都要登录
                         // 之前用 /goods/* 通配导致匿名能调我的发布/删改商品，已收回
