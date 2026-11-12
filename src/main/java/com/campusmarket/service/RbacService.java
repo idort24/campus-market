@@ -43,6 +43,9 @@ public interface RbacService {
     // 权限点树形列表（按 parentId 组织 children）
     List<PermissionNode> listPermissionTree();
 
+    // 查询角色已分配的权限点 ID 集合
+    List<Long> getRolePermIds(Long roleId);
+
     // 查询用户可见的菜单（permType = MENU），供前端动态菜单与路由生成
     List<SysPermission> getUserMenus(Long userId);
 }

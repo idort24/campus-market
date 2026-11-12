@@ -199,8 +199,14 @@ public class RbacServiceImpl implements RbacService {
     }
 
     @Override
-    public List<PermissionNode> listPermissionTree() {
-        List<SysPermission> all = permissionMapper.selectList(new LambdaQueryWrapper<SysPermission>()
+    public List<Long> getRolePermIds(Long roleId) {
+        List<SysRolePermission> rps = rolePermMapper.selectList(
+                new LambdaQueryWrapper<SysRolePermission>().eq(SysRolePermission::getRoleId, roleId));
+        return rps.stream().map(SysRolePermission::getPermissionId).distinct().collect(Collectors.toList());
+    }
+
+    @Override
+    public List<PermissionNode> listPermissionTree() {        List<SysPermission> all = permissionMapper.selectList(new LambdaQueryWrapper<SysPermission>()
                 .orderByAsc(SysPermission::getSort));
         Map<Long, PermissionNode> nodeMap = new LinkedHashMap<>();
         for (SysPermission p : all) {

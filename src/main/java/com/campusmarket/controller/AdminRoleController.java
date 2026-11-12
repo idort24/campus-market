@@ -64,6 +64,12 @@ public class AdminRoleController {
         return R.ok("分配成功");
     }
 
+    // 查询角色已分配的权限点 ID GET /api/v1/roles/{id}/permissions
+    @GetMapping("/roles/{id}/permissions")
+    public R<List<Long>> rolePermIds(@PathVariable("id") Long id) {
+        return R.ok(rbacService.getRolePermIds(id));
+    }
+
     // 给用户分配角色 PUT /api/v1/users/{id}/roles，body: { role_ids: [...] }
     @PutMapping("/users/{id}/roles")
     public R assignUserRoles(@PathVariable Long id, @RequestBody Map<String, Object> body) {
