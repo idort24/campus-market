@@ -22,10 +22,14 @@ public class ConsultEventProducer {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private ConsultCounterHolder counterHolder;
+
     public void send(ConsultEventDTO dto) {
         try {
             String json = objectMapper.writeValueAsString(dto);
             jmsTemplate.convertAndSend(MqConstants.CONSULT_QUEUE, json);
+            counterHolder.incrementProduced();
             log.info("[MQ-生产者] 事件已投递 eventId={} topic={} sessionId={}",
                     dto.getEventId(), dto.getTopic(), dto.getSessionId());
         } catch (Exception e) {

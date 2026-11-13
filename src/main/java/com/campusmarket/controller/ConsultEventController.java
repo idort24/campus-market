@@ -5,6 +5,7 @@ import com.campusmarket.dto.ConsultEventDTO;
 import com.campusmarket.entity.ConsultEvent;
 import com.campusmarket.mq.ConsultEventProducer;
 import com.campusmarket.service.ConsultEventService;
+import com.campusmarket.service.ConsultStatService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,6 +26,9 @@ public class ConsultEventController {
 
     @Autowired
     private ConsultEventService eventService;
+
+    @Autowired
+    private ConsultStatService statService;
 
     /**
      * 投递一条咨询事件到 MQ（异步消费落库）
@@ -65,5 +69,13 @@ public class ConsultEventController {
                 .last("limit 200")
                 .list();
         return R.ok(list);
+    }
+
+    /**
+     * 统计快照：大屏首次加载 / 断线重连的 REST 兜底拉取
+     */
+    @GetMapping("/snapshot")
+    public R snapshot() {
+        return R.ok(statService.snapshot());
     }
 }
