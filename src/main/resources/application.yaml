@@ -40,6 +40,14 @@ spring:
             enable: true
           socketFactory:
             port: 465
+  # ActiveMQ Artemis 内嵌 broker：与 Spring Boot 同进程启动，无需单独装消息中间件；
+  # 演示场景关闭消息持久化，重启后未消费消息不保留（生产环境需打开持久化）
+  artemis:
+    mode: embedded
+    embedded:
+      persistent: false
+    pool:
+      enabled: false
 
 # 文件存储根目录（分片临时目录 staging + 最终目录 final）
 file:

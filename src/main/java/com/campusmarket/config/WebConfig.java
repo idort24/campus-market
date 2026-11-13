@@ -32,7 +32,9 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/v1/category/list",
                         "/api/v1/category/children/*",
                         "/api/v1/evaluation/toUser/*",
-                        "/api/v1/file/**"
+                        "/api/v1/file/**",
+                        // MQ 演示：咨询事件投递与查询，联调 / 大屏演示免登录
+                        "/api/v1/consult/**"
                 );
     }
 
