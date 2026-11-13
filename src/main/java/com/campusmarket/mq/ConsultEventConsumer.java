@@ -5,20 +5,23 @@ import com.campusmarket.entity.EventLog;
 import com.campusmarket.service.ConsultStatService;
 import com.campusmarket.service.EventLogService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.jms.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jms.annotation.JmsListener;
+import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 
 /**
  * 市场事件消费者：从 Artemis 主队列拉取事件，按 event_id 幂等落库。
- * 唯一索引兜底：重复投递抛 DuplicateKeyException 时只记日志并 ack，
- * 不重试、不外抛，避免一直重投最后进死信队列。
+ * 并发数固定为 1，保证单消费者按节奏消化；唯一索引兜底重复投递。
+ * 唯一索引冲突：记日志后正常 ack，不重试、不外抛。
+ * JSON 解析失败：原样转入死信队列 DLQ 等待排查，不静默丢弃。
  * 落库成功后重建统计快照写入 stat_snapshot。
  */
 @Component
@@ -35,13 +38,17 @@ public class ConsultEventConsumer {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @JmsListener(destination = MqConstants.CONSULT_QUEUE)
+    @Autowired
+    private JmsTemplate jmsTemplate;
+
+    @JmsListener(destination = MqConstants.CONSULT_QUEUE, concurrency = "1")
     public void onMessage(String json) {
         ConsultEventDTO dto;
         try {
             dto = objectMapper.readValue(json, ConsultEventDTO.class);
         } catch (Exception e) {
-            log.error("[MQ-消费者] 消息解析失败，消息丢弃: {}", json, e);
+            log.error("[MQ-消费者] 消息解析失败，转入死信队列: {}", json, e);
+            sendToDlq(json, "json_parse_failed");
             return;
         }
 
@@ -76,5 +83,20 @@ public class ConsultEventConsumer {
 
         // 落库后重算快照并写 stat_snapshot，大屏只读这张表
         statService.rebuildSnapshot();
+    }
+
+    /**
+     * 将无法处理的原始消息转入死信队列，附带失败原因属性。
+     */
+    private void sendToDlq(String json, String reason) {
+        try {
+            jmsTemplate.send(MqConstants.DLQ_ADDRESS, session -> {
+                jakarta.jms.TextMessage message = session.createTextMessage(json);
+                message.setStringProperty("reason", reason);
+                return message;
+            });
+        } catch (Exception dlqException) {
+            log.error("[MQ-消费者] 转入死信队列失败: {}", json, dlqException);
+        }
     }
 }

@@ -48,6 +48,10 @@ spring:
       persistent: false
     pool:
       enabled: false
+  # JMS 监听容器：消费者并发数固定为 1，单消费者按节奏消化主队列
+  jms:
+    listener:
+      concurrency: 1
 
 # 文件存储根目录（分片临时目录 staging + 最终目录 final）
 file:
