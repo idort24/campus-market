@@ -5,6 +5,7 @@ import com.campusmarket.dto.ConsultEventDTO;
 import com.campusmarket.entity.EventLog;
 import com.campusmarket.mq.ConsultEventProducer;
 import com.campusmarket.service.ConsultStatService;
+import com.campusmarket.service.DlqInspectService;
 import com.campusmarket.service.EventLogService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -29,6 +30,9 @@ public class ConsultEventController {
 
     @Autowired
     private ConsultStatService statService;
+
+    @Autowired
+    private DlqInspectService dlqInspectService;
 
     /**
      * 投递一条市场事件到 MQ（异步消费落库）
@@ -85,5 +89,13 @@ public class ConsultEventController {
     @GetMapping("/snapshot")
     public R snapshot() {
         return R.ok(statService.snapshot());
+    }
+
+    /**
+     * 查看死信队列中的异常消息（只读浏览，不移除）
+     */
+    @GetMapping("/dlq")
+    public R dlq() {
+        return R.ok(dlqInspectService.browseDlq());
     }
 }
