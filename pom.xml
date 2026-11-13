@@ -111,6 +111,12 @@
             <artifactId>artemis-jakarta-server</artifactId>
         </dependency>
 
+        <!-- WebSocket：咨询大屏快照实时广播，前端长连接接收 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
+
 
     </dependencies>
 
