@@ -81,3 +81,14 @@ nginx -p <nginx目录> -c conf/nginx.conf -s reload
 2. 集群条件：同版本同应用（同一份 jar）、统一入口（Nginx upstream）、无状态可横向扩，满足"集群成立"；
    但**没有** Tomcat 的 `web.xml` + `distributable` + 组播会话复制，因为后端不是 war + HttpSession 架构。
 3. 节点标识：由 Nginx 的 `X-Upstream` 响应头回显，不需要前端写死 1/2/3。
+## 七、节点回显（前后端对接用）
+
+后端提供 `GET /api/v1/consult/node`，返回当前实例标识：
+
+```json
+{"code":1,"msg":"成功","data":{"nodeName":"node-1","port":"8082","ip":"192.168.x.x","host":"...","cacheStore":"redis","redis":"localhost:6380"}}
+```
+
+- 节点名由启动参数 `--app.node-name=node-1`（或环境变量 `NODE_NAME`）指定，三个实例分别为 node-1 / node-2 / node-3。
+- 经 Nginx 访问时，响应头同时带 `X-Upstream` 与 `X-Instance`（值均为实际后端地址），前端回显页直接读 `X-Instance` 即可自动识别落在哪个实例，不需要手填。
+- WebSocket 端点 `/ws/consult` 已配 Nginx 转发（`Upgrade` + `Connection: upgrade` + `proxy_read_timeout 3600s`），HTTP 与 HTTPS 两个 server 均覆盖。
