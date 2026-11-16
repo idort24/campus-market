@@ -8,8 +8,12 @@ import com.campusmarket.service.ConsultStatService;
 import com.campusmarket.service.DlqInspectService;
 import com.campusmarket.service.EventLogService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.net.InetAddress;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,6 +26,8 @@ import java.util.UUID;
 @RequestMapping("/api/v1/consult")
 public class ConsultEventController {
 
+    private static final Logger log = LoggerFactory.getLogger(ConsultEventController.class);
+
     @Autowired
     private ConsultEventProducer producer;
 
@@ -33,6 +39,22 @@ public class ConsultEventController {
 
     @Autowired
     private DlqInspectService dlqInspectService;
+
+    /** 当前实例节点标识，集群部署时用环境变量 NODE_NAME 区分 tomcat-1/2/3 */
+    @Value("${app.node-name:tomcat-1}")
+    private String nodeName;
+
+    @Value("${server.port:8090}")
+    private String serverPort;
+
+    @Value("${cache.store:memory}")
+    private String cacheStore;
+
+    @Value("${spring.data.redis.host:localhost}")
+    private String redisHost;
+
+    @Value("${spring.data.redis.port:6380}")
+    private String redisPort;
 
     /**
      * 投递一条市场事件到 MQ（异步消费落库）
@@ -58,7 +80,7 @@ public class ConsultEventController {
             dto.setSessionId("sess-" + dto.getEventId().substring(0, 8));
         }
         if (dto.getNodeName() == null || dto.getNodeName().isBlank()) {
-            dto.setNodeName("tomcat-1");
+            dto.setNodeName(nodeName);
         }
 
         producer.send(dto);
@@ -97,5 +119,31 @@ public class ConsultEventController {
     @GetMapping("/dlq")
     public R dlq() {
         return R.ok(dlqInspectService.browseDlq());
+    }
+
+    /**
+     * A 套集群演示回显：返回当前实例节点名、端口、主机与缓存/Redis 落点。
+     * 后端为 JWT 无状态，无 HttpSession；这里只回显实例与缓存落点标识。
+     */
+    @GetMapping("/node")
+    public R node() {
+        String host = "unknown";
+        String ip = "unknown";
+        try {
+            InetAddress addr = InetAddress.getLocalHost();
+            host = addr.getHostName();
+            ip = addr.getHostAddress();
+        } catch (Exception e) {
+            log.warn("[NODE] 获取本机主机标识失败: {}", e.getMessage());
+        }
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("nodeName", nodeName);
+        data.put("port", serverPort);
+        data.put("host", host);
+        data.put("ip", ip);
+        data.put("cacheStore", cacheStore);
+        data.put("redis", redisHost + ":" + redisPort);
+        return R.ok(data);
     }
 }

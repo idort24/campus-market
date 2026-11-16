@@ -82,6 +82,10 @@ auth:
 cache:
   store: memory
 
+# 当前实例节点标识：集群部署时用环境变量 NODE_NAME 区分 tomcat-1 / tomcat-2 / tomcat-3
+app:
+  node-name: ${NODE_NAME:tomcat-1}
+
 mybatis-plus:
   configuration:
     # 开启控制台 SQL 打印，方便你看到 MyBatis-Plus 实际生成的 SQL
