@@ -31,6 +31,15 @@ public class ConsultSnapshotDTO {
     /** 队列积压：生产总数 − 已消费数 */
     private Long backlogCount;
 
+    /** 近 60 秒平均消费速率（条/秒） */
+    private Double tps;
+
+    /** 消费成功率，0~1 比例（成功处理 / 生产总数；重复投递幂等确认不计失败，死信计失败），前端展示百分比时 ×100 */
+    private Double successRate;
+
+    /** 被幂等拦截的重复投递条数 */
+    private Long dedupBlocked;
+
     /** 快照时间 */
     private LocalDateTime snapshotTime;
 }

@@ -17,6 +17,7 @@ import java.net.InetAddress;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -63,6 +64,9 @@ public class ConsultEventController {
     public R publish(@RequestBody ConsultEventDTO dto) {
         if (dto.getEventType() == null || dto.getEventType().isBlank()) {
             return R.error(400, "事件类型 eventType 不能为空（view / favorite / order）");
+        }
+        if (!Set.of("view", "favorite", "order").contains(dto.getEventType())) {
+            return R.error(400, "事件类型仅支持 view / favorite / order");
         }
         if (dto.getItemId() == null) {
             return R.error(400, "商品 itemId 不能为空");

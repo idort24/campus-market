@@ -4,6 +4,7 @@ import com.campusmarket.dto.ConsultEventDTO;
 import com.campusmarket.entity.EventLog;
 import com.campusmarket.service.ConsultStatService;
 import com.campusmarket.service.EventLogService;
+import com.campusmarket.service.MqCounterService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.jms.Session;
 import org.slf4j.Logger;
@@ -36,6 +37,9 @@ public class ConsultEventConsumer {
     private ConsultStatService statService;
 
     @Autowired
+    private MqCounterService counterService;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     @Autowired
@@ -58,6 +62,7 @@ public class ConsultEventConsumer {
                 .count();
         if (exists > 0) {
             log.info("[MQ-消费者] 重复事件已忽略 eventId={}", dto.getEventId());
+            counterService.incrementDedupBlocked();
             statService.rebuildSnapshot();
             return;
         }
@@ -74,6 +79,7 @@ public class ConsultEventConsumer {
         } catch (DuplicateKeyException e) {
             // 并发/重投下唯一索引冲突：记日志后正常 ack，不重试、不抛出
             log.info("[MQ-消费者] 唯一索引冲突，重复事件已忽略 eventId={}", dto.getEventId());
+            counterService.incrementDedupBlocked();
             statService.rebuildSnapshot();
             return;
         }

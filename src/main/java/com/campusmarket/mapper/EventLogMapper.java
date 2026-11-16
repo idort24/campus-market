@@ -29,4 +29,9 @@ public interface EventLogMapper extends BaseMapper<EventLog> {
             "FROM mq_demo.event_log GROUP BY DATE_FORMAT(event_time, '%Y-%m-%d %H:%i') " +
             "ORDER BY statKey ASC")
     List<Map<String, Object>> aggregateByMinute();
+
+    /** 最近 60 秒内落库的事件数（用于计算消费 TPS） */
+    @Select("SELECT COUNT(*) FROM mq_demo.event_log " +
+            "WHERE event_time >= DATE_SUB(NOW(), INTERVAL 60 SECOND)")
+    long countRecentOneMinute();
 }

@@ -15,4 +15,9 @@ public interface MqCounterMapper extends BaseMapper<MqCounter> {
     @Update("UPDATE mq_demo.mq_counter SET counter_value = counter_value + 1 " +
             "WHERE counter_key = 'produced'")
     int incrementProduced();
+
+    /** dedup_blocked 计数 +1，行不存在时由调用方补插 */
+    @Update("UPDATE mq_demo.mq_counter SET counter_value = counter_value + 1 " +
+            "WHERE counter_key = 'dedup_blocked'")
+    int incrementDedupBlocked();
 }

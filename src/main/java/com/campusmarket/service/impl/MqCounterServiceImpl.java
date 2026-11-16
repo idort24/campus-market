@@ -30,4 +30,21 @@ public class MqCounterServiceImpl extends ServiceImpl<MqCounterMapper, MqCounter
         MqCounter counter = lambdaQuery().eq(MqCounter::getCounterKey, "produced").one();
         return counter == null || counter.getCounterValue() == null ? 0L : counter.getCounterValue();
     }
+
+    @Override
+    public void incrementDedupBlocked() {
+        int rows = counterMapper.incrementDedupBlocked();
+        if (rows == 0) {
+            MqCounter counter = new MqCounter();
+            counter.setCounterKey("dedup_blocked");
+            counter.setCounterValue(1L);
+            save(counter);
+        }
+    }
+
+    @Override
+    public long getDedupBlocked() {
+        MqCounter counter = lambdaQuery().eq(MqCounter::getCounterKey, "dedup_blocked").one();
+        return counter == null || counter.getCounterValue() == null ? 0L : counter.getCounterValue();
+    }
 }

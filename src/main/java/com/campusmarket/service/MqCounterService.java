@@ -10,4 +10,10 @@ public interface MqCounterService extends IService<MqCounter> {
 
     /** 当前生产总数 */
     long getProduced();
+
+    /** 重复投递被幂等拦截 +1（行不存在则初始化为 1） */
+    void incrementDedupBlocked();
+
+    /** 被幂等拦截的重复投递条数 */
+    long getDedupBlocked();
 }

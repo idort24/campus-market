@@ -78,6 +78,7 @@ SELECT
 FROM seq;
 
 REPLACE INTO mq_counter (counter_key, counter_value) VALUES ('produced', 130);
+REPLACE INTO mq_counter (counter_key, counter_value) VALUES ('dedup_blocked', 0);
 
 -- ============================================================
 -- 5. 生成统计快照（消费者算完写这张表，版本号取 max(id)）
@@ -110,6 +111,19 @@ INSERT INTO stat_snapshot (stat_key, stat_value, version, snapshot_time)
 SELECT 'backlog',
        (SELECT counter_value FROM mq_counter WHERE counter_key = 'produced') - (SELECT COUNT(*) FROM event_log),
        @ver, NOW()
+ON DUPLICATE KEY UPDATE stat_value = VALUES(stat_value), version = VALUES(version), snapshot_time = VALUES(snapshot_time);
+
+-- TPS（条/秒，按百分之一缩放存储）、成功率（0~1，按万分之缩放存储，10000=100%）、幂等拦截数
+INSERT INTO stat_snapshot (stat_key, stat_value, version, snapshot_time)
+SELECT 'tps', 0, @ver, NOW()
+ON DUPLICATE KEY UPDATE stat_value = VALUES(stat_value), version = VALUES(version), snapshot_time = VALUES(snapshot_time);
+
+INSERT INTO stat_snapshot (stat_key, stat_value, version, snapshot_time)
+SELECT 'success_rate', 10000, @ver, NOW()
+ON DUPLICATE KEY UPDATE stat_value = VALUES(stat_value), version = VALUES(version), snapshot_time = VALUES(snapshot_time);
+
+INSERT INTO stat_snapshot (stat_key, stat_value, version, snapshot_time)
+SELECT 'dedup_blocked', 0, @ver, NOW()
 ON DUPLICATE KEY UPDATE stat_value = VALUES(stat_value), version = VALUES(version), snapshot_time = VALUES(snapshot_time);
 
 -- ============================================================
