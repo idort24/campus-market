@@ -29,12 +29,12 @@ public class ConsultBroadcastService {
         if (ConsultWebSocketServer.onlineCount() == 0) {
             return;
         }
-        ConsultSnapshotDTO snapshot = statService.snapshot();
         try {
+            ConsultSnapshotDTO snapshot = statService.snapshot();
             String json = objectMapper.writeValueAsString(snapshot);
             ConsultWebSocketServer.broadcast(json);
         } catch (Exception e) {
-            log.warn("[WS] 快照序列化/广播失败: {}", e.getMessage());
+            log.warn("[WS] 快照读取/序列化/广播失败: {}", e.getMessage());
         }
     }
 }

@@ -118,6 +118,16 @@ public class ConsultEventController {
     }
 
     /**
+     * 手动重算快照：从 event_log 明细聚合写回 stat_snapshot。
+     * 表被重建/清空后兜底触发一次；注意只重建数据行，不建表，表结构需由初始化脚本保证。
+     */
+    @PostMapping("/snapshot/rebuild")
+    public R rebuildSnapshot() {
+        statService.rebuildSnapshot();
+        return R.ok("快照已重建");
+    }
+
+    /**
      * 查看死信队列中的异常消息（只读浏览，不移除）
      */
     @GetMapping("/dlq")
