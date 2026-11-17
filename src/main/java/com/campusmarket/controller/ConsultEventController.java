@@ -123,8 +123,13 @@ public class ConsultEventController {
      */
     @PostMapping("/snapshot/rebuild")
     public R rebuildSnapshot() {
-        statService.rebuildSnapshot();
-        return R.ok("快照已重建");
+        try {
+            statService.rebuildSnapshot();
+            return R.ok("快照已重建");
+        } catch (Exception e) {
+            log.error("[快照] 重建失败", e);
+            return R.error(500, "快照重建失败：请确认 mq_demo 库 event_log/stat_snapshot/mq_counter 三张表已初始化（执行 sql/mq_demo_final.sql）");
+        }
     }
 
     /**
