@@ -278,7 +278,7 @@ document.getElementById("manualTag").value = readJSON(LS_TAG, "");
 
 /* 周泓颖的集群：节点接口是 /api/v1/consult/node，同源访问直接用相对路径 */
 document.getElementById("nodeUrl").value = (loc.protocol === "file:")
-  ? "http://10.75.227.174:8080/api/v1/consult/node"
+  ? "http://127.0.0.1:8090/api/v1/consult/node"
   : loc.origin + "/api/v1/consult/node";
 
 const t0 = performance.timing ? performance.timing.navigationStart : 0;
@@ -539,7 +539,7 @@ document.querySelectorAll(".chip-btn").forEach((btn) => {
       short: btn.dataset.short,
       name: btn.dataset.name
     };
-    const base = (loc.protocol === "file:") ? "http://10.75.227.174:8080" : loc.origin;
+    const base = (loc.protocol === "file:") ? "http://127.0.0.1:8090" : loc.origin;
     document.getElementById("nodeUrl").value = base + currentStrat.prefix + "api/v1/consult/node";
     detectInstance();
   });
