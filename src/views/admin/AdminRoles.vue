@@ -162,10 +162,11 @@ async function removeRole(row) {
 async function changeStatus(row, val) {
   try {
     await roleApi.toggleStatus(row.id, val)
+    // 开关是单向绑定，成功后要把行数据回写，否则 UI 会弹回旧值
+    row.status = val
     ElMessage.success(`「${row.roleName}」已${val ? '启用' : '停用'}`)
   } catch (e) {
     ElMessage.error(e.message || '操作失败')
-    row.status = val ? 0 : 1
   }
 }
 
@@ -247,7 +248,7 @@ onMounted(loadRoles)
     </el-table>
 
     <!-- 分配权限 -->
-    <el-dialog v-model="assignVisible" title="分配权限" width="520px">
+    <el-dialog v-model="assignVisible" title="分配权限" width="520px" destroy-on-close>
       <p class="dlg-tip">
         角色：<b>{{ assignRow?.roleName }}</b> — 勾选该角色可访问的菜单和按钮
       </p>
@@ -271,6 +272,7 @@ onMounted(loadRoles)
       v-model="formVisible"
       :title="formMode === 'create' ? '新增角色' : '编辑角色'"
       width="600px"
+      destroy-on-close
     >
       <el-form ref="formRef" :model="form" :rules="rules" label-width="86px">
         <el-form-item label="角色编码" prop="roleCode">
