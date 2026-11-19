@@ -177,6 +177,64 @@ export const mockReports = [
 
 export const mockAdminCategories = buildCategoryTree()
 
+/* ---------------- 权限推导（供登录 / 菜单复用） ---------------- */
+
+/** 权限 ID 集合 → 权限码（只取 BUTTON 类型，MENU 的 permCode 是路径不是权限码） */
+export function permCodesOfIds(permIds = []) {
+  const ids = new Set((permIds || []).map((n) => Number(n)))
+  const out = []
+  const walk = (nodes) => {
+    nodes.forEach((n) => {
+      if (n.permType === 2 && ids.has(n.id) && n.permCode) out.push(n.permCode)
+      if (n.children) walk(n.children)
+    })
+  }
+  walk(mockPermissionTree)
+  return out
+}
+
+/** 权限 ID 集合 → 菜单路径（MENU 类型） */
+export function menuPathsOfIds(permIds = []) {
+  const ids = new Set((permIds || []).map((n) => Number(n)))
+  const out = []
+  const walk = (nodes) => {
+    nodes.forEach((n) => {
+      if (n.permType === 1 && ids.has(n.id) && n.permCode) out.push(n.permCode)
+      if (n.children) walk(n.children)
+    })
+  }
+  walk(mockPermissionTree)
+  return out
+}
+
+/** 按角色编码取已分配的权限 ID */
+export function rolePermIdsByCode(roleCode) {
+  const role = loadRoles().find((r) => r.roleCode === roleCode)
+  if (!role) return []
+  return loadRolePerms()[String(role.id)] || []
+}
+
+/**
+ * 按角色编码算权限码：不再用 roleCode === 'ADMIN' 写死，
+ * 而是查「该角色被分配了哪些权限项」。
+ * 内置 ADMIN 仍固定全量（超级管理员语义）。
+ */
+export function permsOfRoleCode(roleCode) {
+  if (!roleCode) return []
+  if (roleCode === 'ADMIN') {
+    const all = []
+    const walk = (nodes) => {
+      nodes.forEach((n) => {
+        if (n.permType === 2 && n.permCode) all.push(n.permCode)
+        if (n.children) walk(n.children)
+      })
+    }
+    walk(mockPermissionTree)
+    return all
+  }
+  return permCodesOfIds(rolePermIdsByCode(roleCode))
+}
+
 /* ---------------- 接口实现 ---------------- */
 
 export const adminApi = {

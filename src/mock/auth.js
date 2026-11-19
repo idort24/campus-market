@@ -9,6 +9,9 @@
 
 const delay = (ms = 300) => new Promise((r) => setTimeout(r, ms))
 
+// 角色的权限不再按 roleCode 写死：统一从角色-权限表推导（见 mock/admin.js）
+import { permsOfRoleCode } from './admin.js'
+
 // ---------- 权限码（必须与后端 AuthInterceptor 完全一致）----------
 export const PERMISSION_CODES = [
   'user:manage',
@@ -206,7 +209,8 @@ export const authMock = {
 
     const token = `mock.${window.btoa(unescape(encodeURIComponent(user.studentNo)))}.${Date.now()}`
     const roles = [user.roleCode]
-    const perms = user.roleCode === 'ADMIN' ? [...PERMISSION_CODES] : []
+    // 权限来自「该角色被分配了哪些权限项」，不是 roleCode 写死
+    const perms = permsOfRoleCode(user.roleCode)
 
     // token → 用户 映射，供退出/权限接口取用
     const tokenMap = readJSON(LS_TOKEN_USER, {})
@@ -297,20 +301,23 @@ export const authMock = {
     return { success: true, message: '密码已重置，请重新登录' }
   },
 
-  // 当前用户权限码
+  // 当前用户权限码（按角色-权限表实时计算）
   async getPermissions() {
     await delay(100)
     const info = readJSON('userInfo', {})
-    if (info.roleCode === 'ADMIN') return [...PERMISSION_CODES]
-    return Array.isArray(info.perms) ? info.perms : []
+    return permsOfRoleCode(info.roleCode)
   },
 
-  // 当前角色可见菜单
+  // 当前角色可见菜单：基础菜单按角色，管理后台入口按「是否有任一管理权限」动态给
   async getMenus() {
     await delay(100)
     const info = readJSON('userInfo', {})
     const role = info.roleCode || 'STUDENT'
-    return MENUS_BY_ROLE[role] || MENUS_BY_ROLE.STUDENT
+    const raw = MENUS_BY_ROLE[role] || MENUS_BY_ROLE.STUDENT
+    const base = raw.filter((m) => m.path !== '/admin')
+    const perms = permsOfRoleCode(role)
+    const hasAdmin = perms.some((p) => PERMISSION_CODES.includes(p))
+    return hasAdmin ? [...base, MENU_ADMIN] : base
   },
 
   // 供调试：清空本地 mock 数据
