@@ -778,6 +778,13 @@ function connectLive() {
   if (sock) { sock.close(); sock = null; }
   state.mode = "live";
   state.lastMsgAt = 0;
+  // 从模拟数据切到真后端：清掉 mock 推高的版本基线，否则首条真实快照 version 更低会被闸门丢弃
+  state.version = -1;
+  state.received = 0;
+  state.dropped = 0;
+  state.rollbackStreak = 0;
+  state.backlogSeries = [];
+  hideRollbackAlert();
   setStatus("error", "正在连接…");
   document.getElementById("noteLog").textContent = "version 小于等于已展示值会被丢弃";
 
