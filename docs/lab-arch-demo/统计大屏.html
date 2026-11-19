@@ -129,7 +129,7 @@ table.log tr.stale td{color:var(--red)}
   <div class="conn">
     <span class="status-pill"><span class="dot" id="statusDot"></span><span id="statusText">未连接</span></span>
     <span class="ver">version <b id="verText">—</b></span>
-    <input id="wsUrl" value="" placeholder="ws://当前入口/ws/consult" spellcheck="false" aria-label="WebSocket 地址">
+    <input id="wsUrl" value="ws://10.37.11.159:8080/ws/consult" spellcheck="false" aria-label="WebSocket 地址">
     <button class="btn primary" id="btnConnect">连接</button>
     <button class="btn" id="btnDisconnect">断开</button>
     <button class="btn" id="btnReset">重置</button>
@@ -188,7 +188,7 @@ table.log tr.stale td{color:var(--red)}
     <div class="panel-head"><h2>连接与校验</h2><span class="note">version 规则：只接受更大值</span></div>
     <div class="side">
       <span class="side-label">REST 兜底地址（重连后拉全量）</span>
-      <input id="restUrl" value="" placeholder="http://当前入口/api/v1/consult/snapshot" spellcheck="false" aria-label="REST 兜底地址">
+      <input id="restUrl" value="http://10.37.11.159:8080/api/v1/consult/snapshot" spellcheck="false" aria-label="REST 兜底地址">
       <div class="side-row"><span class="k">已接收快照</span><span class="v" id="iRecv">0</span></div>
       <div class="side-row"><span class="k">被丢弃</span><span class="v" id="iDrop">0</span></div>
       <div class="side-row"><span class="k">最后收到</span><span class="v" id="iLast">—</span></div>
@@ -289,23 +289,6 @@ const state = {
 const MAX_LOG = 42;
 const MAX_BACKLOG_POINTS = 60;
 const STALE_MS = 5000;   // 断流判定：5 秒没快照就重连（后端 250ms 一推，5 秒 = 20 个周期）
-
-/* 默认地址：按当前入口同源推导，换机器/换网络不用手改；file:// 直开兜底本机 8090。
-   输入框仍可手动覆盖，这里只在留空时填默认值。 */
-(function initDefaultUrls() {
-  const wsEl = document.getElementById("wsUrl");
-  const restEl = document.getElementById("restUrl");
-  const httpBase = (location.protocol === "http:" || location.protocol === "https:")
-    ? location.origin
-    : "http://127.0.0.1:8090";
-  const wsBase = location.protocol === "https:"
-    ? "wss://" + location.host
-    : location.protocol === "http:"
-      ? "ws://" + location.host
-      : "ws://127.0.0.1:8090";
-  if (!restEl.value.trim()) restEl.value = httpBase + "/api/v1/consult/snapshot";
-  if (!wsEl.value.trim()) wsEl.value = wsBase + "/ws/consult";
-})();
 
 /* ============================================================
    WebSocket 客户端
@@ -778,13 +761,6 @@ function connectLive() {
   if (sock) { sock.close(); sock = null; }
   state.mode = "live";
   state.lastMsgAt = 0;
-  // 从模拟数据切到真后端：清掉 mock 推高的版本基线，否则首条真实快照 version 更低会被闸门丢弃
-  state.version = -1;
-  state.received = 0;
-  state.dropped = 0;
-  state.rollbackStreak = 0;
-  state.backlogSeries = [];
-  hideRollbackAlert();
   setStatus("error", "正在连接…");
   document.getElementById("noteLog").textContent = "version 小于等于已展示值会被丢弃";
 
