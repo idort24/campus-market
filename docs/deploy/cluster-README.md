@@ -92,3 +92,18 @@ nginx -p <nginx目录> -c conf/nginx.conf -s reload
 - 节点名由启动参数 `--app.node-name=node-1`（或环境变量 `NODE_NAME`）指定，三个实例分别为 node-1 / node-2 / node-3。
 - 经 Nginx 访问时，响应头同时带 `X-Upstream` 与 `X-Instance`（值均为实际后端地址），前端回显页直接读 `X-Instance` 即可自动识别落在哪个实例，不需要手填。
 - WebSocket 端点 `/ws/consult` 已配 Nginx 转发（`Upgrade` + `Connection: upgrade` + `proxy_read_timeout 3600s`），HTTP 与 HTTPS 两个 server 均覆盖。
+## 八、验证结果（2026-11-19 实测）
+
+| 验证项 | 实测结果 | 证据 |
+| --- | --- | --- |
+| 轮询 | 8082 → 8083 → 8084 严格循环 | 连发 3 次 `X-Upstream` 依次递增 |
+| 加权 3:1:1 | 5 次中 8082 命中 3 次 | 序列 8082 / 8083 / 8082 / 8084 / 8082 |
+| IP 哈希 | 同一客户端 3 次全部落 8084 | 三次 `X-Upstream` 完全相同 |
+| 最少连接 | 三台轮转 | 8082 → 8083 → 8084 |
+| 代理头透传 | 四项均有值 | 假后端捕获：`Host: 127.0.0.1`、`X-Real-IP: 127.0.0.1`、`X-Forwarded-For: 1.2.3.4, 127.0.0.1`、`X-Forwarded-Proto: http` |
+| 动静分离 | `/static/index.html` 返回 200，access.log 中 `upstream=-` | 请求未转发到后端 |
+| SSL 卸载 | `https://127.0.0.1:8443/rr/...` 返回 200 且带 `X-Upstream` | 后端侧仍为明文 HTTP |
+| 健康摘除 | 停 8084 后 12 次请求全部 200，第 3 次起不再命中 8084 | 前两次为 `proxy_next_upstream` 重试痕迹，`X-Upstream` 显示 8084, 8082 |
+| 平滑重载 | `-t` 通过，reload 前后各 5 次请求全部 200 | reload 期间无中断 |
+
+补充：三实例均回显 `cacheStore: redis`、`redis: localhost:6380`，跨实例缓存集中在 Redis；`/ws/` 固定落 node-1，避免多实例各自广播导致前端版本号不同步。
