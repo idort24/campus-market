@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tomcat 实例回显测试页</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23f4f5f2'/%3E%3Crect x='7' y='7' width='7' height='7' fill='%230b7285'/%3E%3Crect x='18' y='7' width='7' height='7' fill='%23101720'/%3E%3Crect x='7' y='18' width='7' height='7' fill='%23101720'/%3E%3Crect x='18' y='18' width='7' height='7' fill='%230b7285'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#f4f5f2;
+  --card:#fffffe;
+  --ink:#101720;
+  --ink-2:#3d4c5c;
+  --muted:#7b8a99;
+  --line:#dfe3e0;
+  --accent:#0b7285;
+  --accent-soft:#e3f0f2;
+  --warn:#b45309;
+  --mono:"Cascadia Mono",Consolas,"SF Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;font-size:14px;line-height:1.55;padding:22px 20px 40px}
+.shell{max-width:1080px;margin:0 auto}
+
+/* 页头 */
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between;padding-bottom:14px;border-bottom:2px solid var(--ink)}
+h1{font-size:20px;font-weight:700;letter-spacing:.3px}
+header .tag{font-family:var(--mono);font-size:11.5px;color:var(--muted);padding:4px 9px;border:1px solid var(--line);background:var(--card)}
+
+/* 主结果卡 */
+.hero{display:grid;grid-template-columns:1.25fr 1fr;gap:16px;margin-top:18px}
+.result{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);padding:22px 24px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.result .r-label{font-size:12px;color:var(--muted);letter-spacing:1px}
+.result .r-value{font-family:var(--mono);font-size:40px;line-height:1.1;font-weight:600;letter-spacing:-.5px;word-break:break-all;color:var(--ink)}
+.result .r-value.unknown{font-size:26px;color:var(--warn)}
+.result .r-meta{font-size:12.5px;color:var(--ink-2)}
+.result .r-meta code{font-family:var(--mono);background:#eef1ee;padding:1px 5px;border-radius:2px}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;padding:3px 9px;border-radius:2px;border:1px solid;width:fit-content}
+.badge.header{color:var(--accent);border-color:#a9cfd6;background:var(--accent-soft)}
+.badge.port{color:#3f4f5e;border-color:#cdd6dd;background:#eef1f4}
+.badge.manual{color:var(--warn);border-color:#e5c59a;background:#fbf0e0}
+.badge.none{color:var(--warn);border-color:#e5c59a;background:#fbf0e0}
+.badge.node{color:#2f6b3f;border-color:#b8d8c2;background:#eaf4ed}
+
+/* 信息网格 */
+.info{background:var(--card);border:1px solid var(--line);padding:16px 18px;display:grid;grid-template-columns:1fr;gap:9px;min-width:0}
+.info-row{display:flex;justify-content:space-between;gap:12px;font-size:13px;border-bottom:1px dashed #eaedeb;padding-bottom:7px}
+.info-row:last-child{border-bottom:0;padding-bottom:0}
+.info-row .k{color:var(--muted);flex:none}
+.info-row .v{font-family:var(--mono);text-align:right;word-break:break-all;color:var(--ink-2);font-size:12.5px}
+
+/* 操作区 */
+.actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:16px;align-items:center}
+.btn{background:var(--ink);color:#fff;border:1px solid var(--ink);padding:7px 15px;font-size:13px;border-radius:2px;cursor:pointer;font-family:inherit;transition:background .15s}
+.btn:hover{background:#233140}
+.btn.ghost{background:var(--card);color:var(--ink);border-color:var(--line)}
+.btn.ghost:hover{background:#eef1ee;border-color:var(--ink)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* 负载策略切换 */
+.strat{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+.strat .strat-label{font-size:12px;color:var(--muted)}
+.chip-btn{background:var(--card);border:1px solid var(--line);color:var(--ink-2);font-size:12px;padding:5px 11px;border-radius:2px;cursor:pointer;font-family:var(--mono)}
+.chip-btn:hover{border-color:var(--ink);color:var(--ink)}
+.chip-btn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.chip-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input[type=text]{background:var(--card);border:1px solid var(--line);padding:7px 10px;font-size:13px;font-family:var(--mono);border-radius:2px;min-width:170px;color:var(--ink)}
+input[type=text]:focus{outline:none;border-color:var(--accent)}
+
+/* 区块 */
+section.block{margin-top:26px}
+.block-head{display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;justify-content:space-between;margin-bottom:10px}
+.block-head h2{font-size:14.5px;font-weight:700}
+.block-head .hint{font-size:12px;color:var(--muted)}
+
+/* 历史表 */
+table{width:100%;border-collapse:collapse;table-layout:fixed;background:var(--card);font-size:12.5px}
+col.c1{width:78px}col.c2{width:150px}col.c3{width:72px}col.c4{width:100px}col.c5{width:110px}col.c6{width:auto}
+th{background:#ecefed;color:var(--ink-2);font-weight:600;text-align:left;padding:8px 11px;border-bottom:1px solid var(--line);font-size:11.5px;letter-spacing:.4px}
+td{padding:7px 11px;border-bottom:1px solid #f0f2f0;font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+td.inst{color:var(--accent);font-weight:600}
+tr.latest td{background:#f6fafb}
+.empty{padding:22px;text-align:center;color:var(--muted);font-size:12.5px}
+
+/* 分发统计 */
+.dist{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chip{font-family:var(--mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);background:var(--card);color:var(--ink-2)}
+.chip b{color:var(--accent);font-weight:700}
+
+/* 配置片段 */
+pre.cfg{background:#121a22;color:#d5e2ee;padding:15px 17px;border-radius:2px;overflow:auto;font-family:var(--mono);font-size:12px;line-height:1.7}
+pre.cfg .c{color:#7f97ab}
+pre.cfg .hl{color:#f0a83c}
+.note{font-size:12.5px;color:var(--muted);margin-top:9px;line-height:1.7}
+.note b{color:var(--ink-2)}
+
+@media (max-width:860px){
+  .hero{grid-template-columns:1fr}
+  .result .r-value{font-size:32px}
+  h1{font-size:18px}
+}
+@media (max-width:600px){
+  body{padding:16px 13px 30px}
+  .result{padding:18px}
+  .result .r-value{font-size:27px}
+  table{font-size:11.5px}
+  col.c6{width:0}
+  th:nth-child(6),td:nth-child(6){display:none}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header>
+    <div>
+      <h1>实例回显测试页</h1>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">A 套 · 验证 Nginx 把请求分发到了哪个实例（node-1 / node-2 / node-3）</div>
+    </div>
+    <span class="tag" id="visitCount">第 — 次访问</span>
+  </header>
+
+  <!-- 当前实例 -->
+  <div class="hero">
+    <div class="result">
+      <span class="r-label">当前响应的实例</span>
+      <span class="r-value" id="instanceName">识别中…</span>
+      <span class="badge none" id="sourceBadge">来源：—</span>
+      <div class="r-meta" id="instanceMeta">正在读取当前请求的响应头…</div>
+    </div>
+
+    <div class="info">
+      <div class="info-row"><span class="k">访问地址</span><span class="v" id="iUrl">—</span></div>
+      <div class="info-row"><span class="k">Host</span><span class="v" id="iHost">—</span></div>
+      <div class="info-row"><span class="k">端口</span><span class="v" id="iPort">—</span></div>
+      <div class="info-row"><span class="k">Server 头</span><span class="v" id="iServer">—</span></div>
+      <div class="info-row"><span class="k">页面渲染耗时</span><span class="v" id="iTiming">—</span></div>
+      <div class="info-row"><span class="k">本次时间</span><span class="v" id="iTime">—</span></div>
+      <div class="info-row"><span class="k">UA</span><span class="v" id="iUa">—</span></div>
+    </div>
+  </div>
+
+  <!-- 操作 -->
+  <div class="actions">
+    <button class="btn" id="btnReload">刷新一次（再取一次实例）</button>
+    <input type="text" id="manualTag" placeholder="手动标记，如 tomcat-02" aria-label="手动标记实例">
+    <button class="btn ghost" id="btnSaveTag">保存标记</button>
+    <button class="btn ghost" id="btnClear">清空历史</button>
+    <button class="btn ghost" id="btnCopy">复制本页记录</button>
+  </div>
+
+  <!-- 后端 /node 接口 -->
+  <section class="block">
+    <div class="block-head">
+      <h2>后端 /node 接口</h2>
+      <span class="hint">马智贤提供：nodeName 是实例名，cacheStore / redis 是缓存落点</span>
+    </div>
+    <div class="actions" style="margin-top:0">
+      <input type="text" id="nodeUrl" style="flex:1;min-width:220px" aria-label="node 接口地址">
+      <button class="btn ghost" id="btnNode">重新请求</button>
+    </div>
+    <div class="strat" style="margin-top:10px">
+      <span class="strat-label">负载策略</span>
+      <button class="chip-btn on" data-prefix="" data-short="默认" data-name="默认（轮询）">默认</button>
+      <button class="chip-btn" data-prefix="/rr/" data-short="rr" data-name="轮询 rr">/rr/ 轮询</button>
+      <button class="chip-btn" data-prefix="/weight/" data-short="weight" data-name="加权 3:1:1">/weight/ 加权</button>
+      <button class="chip-btn" data-prefix="/iphash/" data-short="iphash" data-name="IP 哈希">/iphash/ 哈希</button>
+      <button class="chip-btn" data-prefix="/least/" data-short="least" data-name="最少连接">/least/ 最少连接</button>
+    </div>
+    <div id="cacheInfo" style="margin-top:10px;font-size:12.5px;color:var(--ink-2)">还没有请求 /node 接口。</div>
+  </section>
+
+  <!-- 历史 -->
+  <section class="block">
+    <div class="block-head">
+      <h2>访问历史</h2>
+      <span class="hint">多点几次「刷新一次」，这里能看出请求是否被轮流分发到不同实例</span>
+    </div>
+    <table>
+      <colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"></colgroup>
+      <thead><tr><th>#</th><th>实例</th><th>端口</th><th>来源</th><th>时间</th><th>地址</th></tr></thead>
+      <tbody id="histBody">
+        <tr><td colspan="6" class="empty">还没有记录</td></tr>
+      </tbody>
+    </table>
+    <div class="dist" id="distBox"></div>
+  </section>
+
+  <!-- 判断规则 -->
+  <section class="block">
+    <div class="block-head"><h2>实例是怎么识别出来的</h2></div>
+    <div class="note">
+      <b>① 后端 /node 接口（最可靠）</b>：请求后端 <code>/node</code>，返回的 <code>nodeName</code> 就是实例名，同时给出 <code>cacheStore</code> / <code>redis</code> 缓存落点。
+      <br><b>② 响应头</b>：页面用 <code>fetch(location.href, {method:'HEAD'})</code> 读自己的响应头，若 Nginx 注入了 <code>X-Instance</code>，直接用它。
+      <br><b>③ 端口推断（直连时可用）</b>：直接访问 <code>http://ip:8081</code> 这类地址时，按端口推断成实例。
+      <br><b>④ 手动标记（兜底）</b>：以上都取不到时，手动填一次，本机记住。
+      <br>四条都取不到，说明 /node 路径不对、且 Nginx 没配 <code>X-Instance</code>，按下面的片段补上即可。
+      <br><br><b>关于环境</b>：原计划的 Tomcat 9 集群已下线 —— 后端是 Spring Boot 3（jakarta），Tomcat 9 是 javax，war 包打不进去。现在改成同一份 jar 起 3 个实例：<code>node-1:8082</code> / <code>node-2:8083</code> / <code>node-3:8084</code>，Nginx 在上面做分发。页面标题保留"Tomcat"是为了对上实验编号，实际验证的是 Spring Boot 实例。
+    </div>
+  </section>
+
+  <!-- Nginx 片段 -->
+  <section class="block">
+    <div class="block-head">
+      <h2>给周泓颖的 Nginx 配置片段</h2>
+      <span class="hint">加了这一行，页面就能自动识别实例</span>
+    </div>
+<pre class="cfg"><span class="c"># nginx.conf —— upstream 与 add_header</span>
+upstream tomcat_cluster {
+    <span class="hl"># 负载策略按周泓颖的方案选一种，其余注释掉</span>
+    # ip_hash;                          <span class="c"># 策略一：IP 哈希</span>
+    # least_conn;                       <span class="c"># 策略二：最少连接</span>
+    # fair;                             <span class="c"># 策略三：fair（需第三方模块）</span>
+    server 192.168.1.11:8080 weight=1;  <span class="c"># 策略四：加权轮询（默认）</span>
+    server 192.168.1.12:8080 weight=1;
+    server 192.168.1.13:8080 weight=2;
+}
+
+server {
+    listen 80;
+    server_name _;
+
+    location / {
+        proxy_pass http://tomcat_cluster;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+
+        <span class="hl"># 关键：把上游实例名回写给前端</span>
+        <span class="hl">add_header X-Instance $upstream_addr always;</span>
+        <span class="hl">add_header X-Upstream-Status $upstream_status always;</span>
+    }
+}</pre>
+    <div class="note">
+      <b>$upstream_addr</b> 的值形如 <code>192.168.1.12:8080</code>，本页会把它显示成实例名（也可以再加一条 <code>map</code> 把它映射成 <code>tomcat-02</code>）。<b>always</b> 不能省，否则 4xx/5xx 响应不带这个头，页面就识别不出来。
+    </div>
+  </section>
+
+</div>
+
+<script>
+/* ============================================================
+   localStorage 键
+   ============================================================ */
+const LS_HIST = "lab_a_history";
+const LS_COUNT = "lab_a_visit_count";
+const LS_TAG = "lab_a_manual_tag";
+
+const MAX_HIST = 60;
+
+function readJSON(k, d) {
+  try {
+    const v = localStorage.getItem(k);
+    return v ? JSON.parse(v) : d;
+  } catch (e) { return d; }
+}
+function writeJSON(k, v) {
+  try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {}
+}
+
+/* 访问计数 */
+let count = readJSON(LS_COUNT, 0) + 1;
+writeJSON(LS_COUNT, count);
+document.getElementById("visitCount").textContent = "第 " + count + " 次访问";
+
+/* ============================================================
+   基础信息
+   ============================================================ */
+const loc = location;
+const port = loc.port || (loc.protocol === "https:" ? "443" : "80");
+const nowStr = new Date().toLocaleString("zh-CN", { hour12: false });
+
+document.getElementById("iUrl").textContent = loc.href.length > 46 ? loc.href.slice(0, 46) + "…" : loc.href;
+document.getElementById("iHost").textContent = loc.host;
+document.getElementById("iPort").textContent = port;
+document.getElementById("iTime").textContent = nowStr;
+document.getElementById("iUa").textContent = navigator.userAgent.slice(0, 60) + (navigator.userAgent.length > 60 ? "…" : "");
+document.getElementById("manualTag").value = readJSON(LS_TAG, "");
+
+/* 周泓颖的集群：节点接口是 /api/v1/consult/node，同源访问直接用相对路径 */
+document.getElementById("nodeUrl").value = (loc.protocol === "file:")
+  ? "http://10.75.227.174:8080/api/v1/consult/node"
+  : loc.origin + "/api/v1/consult/node";
+
+const t0 = performance.timing ? performance.timing.navigationStart : 0;
+const loaded = performance.now();
+document.getElementById("iTiming").textContent = loaded.toFixed(0) + " ms";
+
+/* ============================================================
+   实例识别（按优先级）
+   1) 后端 /node 接口：nodeName + cacheStore / redis
+   2) 响应头 X-Instance / X-Upstream-Addr / Server
+   3) 端口推断
+   4) 手动标记
+   ============================================================ */
+/* 周泓颖 2026-11-17 的环境：不是 Tomcat 9，是 3 个 Spring Boot 实例。
+   8082 / 8083 / 8084 = node-1 / node-2 / node-3；
+   8080 是 Nginx 入口（不是实例），8090 是马智贤那台单实例后端。 */
+const PORT_MAP = {
+  "8082": "node-1",
+  "8083": "node-2",
+  "8084": "node-3",
+  "8080": "Nginx 入口",
+  "8090": "后端单实例（直连）"
+};
+
+function prettyInstance(raw) {
+  if (!raw) return null;
+  let v = String(raw).trim();
+  // $upstream_addr 可能带端口，如 192.168.1.12:8080
+  const m = v.match(/^(\S+):(\d+)$/);
+  if (m) {
+    const p = m[2];
+    if (PORT_MAP[p]) return PORT_MAP[p] + "（" + m[1] + ":" + p + "）";
+    return m[1] + ":" + p;
+  }
+  return v;
+}
+
+/* 当前负载策略（周泓颖的 Nginx 开了四个前缀用于对比） */
+let currentStrat = { prefix: "", short: "默认", name: "默认（轮询）" };
+let detectedPort = null;
+
+/* 调后端 /node：返回 nodeName（实例名）与 cacheStore / redis（缓存落点） */
+async function probeNode() {
+  const input = document.getElementById("nodeUrl");
+  const url = (input ? input.value : "").trim();
+  if (!/^https?:\/\//i.test(url)) return { error: "地址需要以 http:// 开头" };
+  try {
+    const resp = await fetch(url, { cache: "no-store", headers: { Accept: "application/json" } });
+    if (!resp.ok) return { error: "HTTP " + resp.status };
+    const body = await resp.json();
+    const d = (body && body.data && typeof body.data === "object") ? body.data : body;
+    return {
+      nodeName: d.nodeName || d.node_name || d.instanceName || d.instance || null,
+      port: d.port ?? null,
+      ip: d.ip ?? null,
+      host: d.host ?? null,
+      cacheStore: d.cacheStore ?? d.cache_store ?? null,
+      redis: d.redis ?? null
+    };
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+function fmtNodeVal(v) {
+  if (v === null || v === undefined) return "";
+  return (typeof v === "object") ? JSON.stringify(v) : String(v);
+}
+
+function renderCacheInfo(info) {
+  const el = document.getElementById("cacheInfo");
+  if (!el) return;
+  if (!info) { el.textContent = "还没有请求 /node 接口。"; return; }
+  if (info.error) {
+    el.innerHTML = "请求 /node 失败：" + info.error +
+      "。常见原因：接口挂在某个 context 下（路径应改成 <b>http://主机:端口/context/node</b>）、后端没起、或跨域被拦。";
+    return;
+  }
+  const lines = [];
+  lines.push(info.nodeName
+    ? "<b>nodeName = " + fmtNodeVal(info.nodeName) + "</b>"
+    : "接口返回里没有 nodeName");
+  const addr = [];
+  if (info.ip) addr.push("ip = " + fmtNodeVal(info.ip));
+  if (info.port) addr.push("port = " + fmtNodeVal(info.port));
+  if (info.host) addr.push("host = " + fmtNodeVal(info.host));
+  if (addr.length) lines.push("实例地址：" + addr.join("　·　"));
+  const cache = [];
+  if (info.cacheStore) cache.push("cacheStore = " + fmtNodeVal(info.cacheStore));
+  if (info.redis) cache.push("redis = " + fmtNodeVal(info.redis));
+  lines.push(cache.length ? "缓存落点：" + cache.join("　·　") : "接口里没有 cacheStore / redis 字段。");
+  el.innerHTML = lines.join("<br>");
+}
+
+async function detectInstance() {
+  const manual = readJSON(LS_TAG, "");
+  let inst = null, source = "none", serverHeader = "—", headers = null;
+
+  /* ① 后端 /node 接口：实例名和缓存落点都由后端给出，最可靠 */
+  const nodeInfo = await probeNode();
+  renderCacheInfo(nodeInfo);
+  detectedPort = (nodeInfo && nodeInfo.port) ? String(nodeInfo.port) : null;
+  if (nodeInfo && nodeInfo.nodeName) {
+    inst = prettyInstance(nodeInfo.nodeName);
+    source = "node";
+  }
+
+  if (loc.protocol === "file:") {
+    // 本地直接双击打开，读不到响应头；只有 /node 能救
+    document.getElementById("iServer").textContent = "—";
+    renderInstance(
+      inst,
+      source,
+      inst ? null : "当前是 file:// 直接打开，读不到响应头；/node 接口也没给出实例名。请通过 Nginx 入口或 Tomcat 地址访问本页。",
+      null
+    );
+    return;
+  }
+
+  /* ② 响应头 */
+  if (!inst) {
+    try {
+      const resp = await fetch(loc.href, { method: "HEAD", cache: "no-store" });
+      serverHeader = resp.headers.get("server") || "—";
+      const x1 = resp.headers.get("x-instance");
+      const x2 = resp.headers.get("x-upstream-addr");
+      const x3 = resp.headers.get("x-upstream-status");
+      headers = {
+        "X-Instance": x1 || "—",
+        "X-Upstream-Addr": x2 || "—",
+        "X-Upstream-Status": x3 || "—",
+        "Server": serverHeader
+      };
+      const raw = x1 || x2;
+      if (raw) { inst = prettyInstance(raw); source = "header"; }
+    } catch (e) {
+      serverHeader = "读取失败";
+    }
+  }
+
+  document.getElementById("iServer").textContent = serverHeader;
+
+  /* ③ 端口推断 */
+  if (!inst) {
+    const mapped = PORT_MAP[String(port)];
+    if (mapped) { inst = mapped; source = "port"; }
+  }
+
+  /* ④ 手动标记 */
+  if (!inst && manual) { inst = manual; source = "manual"; }
+
+  renderInstance(inst, source, null, headers);
+}
+
+function renderInstance(inst, source, problem, headers) {
+  const nameEl = document.getElementById("instanceName");
+  const badgeEl = document.getElementById("sourceBadge");
+  const metaEl = document.getElementById("instanceMeta");
+
+  const SOURCE_TEXT = {
+    node: "来源：后端 /node 接口",
+    header: "来源：响应头 X-Instance",
+    port: "来源：端口推断",
+    manual: "来源：手动标记",
+    none: "来源：未识别"
+  };
+
+  if (inst) {
+    nameEl.textContent = inst;
+    nameEl.classList.remove("unknown");
+  } else {
+    nameEl.textContent = "未识别到实例";
+    nameEl.classList.add("unknown");
+  }
+
+  badgeEl.className = "badge " + (source || "none");
+  badgeEl.textContent = SOURCE_TEXT[source] || SOURCE_TEXT.none;
+
+  if (problem) {
+    metaEl.textContent = problem;
+  } else if (source === "node") {
+    metaEl.innerHTML = "实例名来自后端 <code>/node</code> 接口，最可靠：请求确实落到了这个实例，缓存落点也一并返回。";
+  } else if (source === "header") {
+    metaEl.innerHTML = "从响应头读到实例，说明请求确实被 Nginx 转发到了某个 Tomcat。";
+  } else if (source === "port") {
+    metaEl.innerHTML = "直接访问了 Tomcat 端口，按端口推断实例。走 Nginx 入口时应该变成响应头来源。";
+  } else if (source === "manual") {
+    metaEl.innerHTML = "响应头里没有实例信息，用的是你手动填的标记。要自动识别，按页面下方片段给 Nginx 加 <code>add_header</code>。";
+  } else {
+    metaEl.innerHTML = "响应头和端口都没给出实例。可能是 Nginx 统一入口没有注入 <code>X-Instance</code>，见下方配置片段。";
+  }
+
+  // 记录历史
+  const hist = readJSON(LS_HIST, []);
+  hist.unshift({
+    inst: inst || "未识别",
+    port: detectedPort || port,
+    source: source || "none",
+    strat: currentStrat.short,
+    stratName: currentStrat.name,
+    time: nowStr,
+    url: loc.href
+  });
+  if (hist.length > MAX_HIST) hist.length = MAX_HIST;
+  writeJSON(LS_HIST, hist);
+  renderHistory(hist);
+}
+
+/* ============================================================
+   历史渲染
+   ============================================================ */
+function renderHistory(hist) {
+  const body = document.getElementById("histBody");
+  if (!hist.length) {
+    body.innerHTML = '<tr><td colspan="6" class="empty">还没有记录</td></tr>';
+    return;
+  }
+  const SOURCE_SHORT = { node: "接口", header: "响应头", port: "端口", manual: "手动", none: "未识别" };
+  body.innerHTML = hist.map((r, i) => `
+    <tr class="${i === 0 ? "latest" : ""}">
+      <td>${hist.length - i}</td>
+      <td class="inst">${r.inst}</td>
+      <td>${r.port}</td>
+      <td>${(SOURCE_SHORT[r.source] || r.source)}${r.strat ? " · " + r.strat : ""}</td>
+      <td>${r.time}</td>
+      <td>${r.url}</td>
+    </tr>
+  `).join("");
+
+  // 分发统计
+  const dist = {};
+  hist.slice(0, 20).forEach((r) => { dist[r.inst] = (dist[r.inst] || 0) + 1; });
+  const box = document.getElementById("distBox");
+  const keys = Object.keys(dist);
+  box.innerHTML = keys.length
+    ? "最近 20 次的分发： " + keys.map((k) => `<span class="chip">${k} <b>${dist[k]}</b> 次</span>`).join(" ")
+    : "";
+}
+
+/* ============================================================
+   交互
+   ============================================================ */
+document.getElementById("btnReload").addEventListener("click", () => {
+  location.reload();
+});
+
+document.getElementById("btnNode").addEventListener("click", () => {
+  detectInstance();
+});
+
+/* 策略切换：点了直接改接口地址并重新请求，四种策略一轮就能对比 */
+document.querySelectorAll(".chip-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".chip-btn").forEach((b) => b.classList.remove("on"));
+    btn.classList.add("on");
+    currentStrat = {
+      prefix: btn.dataset.prefix || "",
+      short: btn.dataset.short,
+      name: btn.dataset.name
+    };
+    const base = (loc.protocol === "file:") ? "http://10.75.227.174:8080" : loc.origin;
+    document.getElementById("nodeUrl").value = base + currentStrat.prefix + "api/v1/consult/node";
+    detectInstance();
+  });
+});
+
+document.getElementById("btnSaveTag").addEventListener("click", () => {
+  const v = document.getElementById("manualTag").value.trim();
+  writeJSON(LS_TAG, v);
+  const metaEl = document.getElementById("instanceMeta");
+  metaEl.textContent = v ? "已保存手动标记：" + v + "。刷新页面后生效（响应头优先）。" : "已清除手动标记。";
+  if (v) {
+    document.getElementById("sourceBadge").className = "badge manual";
+    document.getElementById("sourceBadge").textContent = "来源：手动标记（刷新后生效）";
+  }
+});
+
+document.getElementById("btnClear").addEventListener("click", () => {
+  writeJSON(LS_HIST, []);
+  writeJSON(LS_COUNT, 0);
+  renderHistory([]);
+  document.getElementById("visitCount").textContent = "第 0 次访问";
+  document.getElementById("instanceMeta").textContent = "历史已清空。";
+  document.getElementById("distBox").innerHTML = "";
+});
+
+document.getElementById("btnCopy").addEventListener("click", async () => {
+  const hist = readJSON(LS_HIST, []);
+  const text = hist.map((r) => `${r.time}\t${r.strat || "默认"}\t${r.inst}\t${r.port}\t${r.source}\t${r.url}`).join("\n");
+  try {
+    await navigator.clipboard.writeText(text || "（暂无记录）");
+    document.getElementById("instanceMeta").textContent = "已复制 " + hist.length + " 条记录，可直接粘进实验报告。";
+  } catch (e) {
+    document.getElementById("instanceMeta").textContent = "复制失败：浏览器不允许写剪贴板，请手动选中表格复制。";
+  }
+});
+
+/* 启动检测 */
+detectInstance();
+</script>
+</body>
+</html>

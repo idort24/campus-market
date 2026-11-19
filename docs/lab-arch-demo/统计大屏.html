@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>事件统计大屏 · B 套</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230a1017'/%3E%3Cpath d='M6 22 L12 14 L17 19 L26 8' stroke='%23f0a83c' stroke-width='3' fill='none'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0a1017;
+  --panel:#101a24;
+  --panel-2:#0d151d;
+  --line:rgba(255,255,255,.08);
+  --line-soft:rgba(255,255,255,.04);
+  --text:#e7edf5;
+  --muted:#8fa3b8;
+  --amber:#f0a83c;
+  --cyan:#3fbcb4;
+  --red:#d9645a;
+  --mono:"Cascadia Mono",Consolas,"SF Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;font-size:14px;line-height:1.5}
+body{min-height:100vh;padding:18px 20px 28px}
+
+/* 顶栏 */
+.topbar{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:baseline;gap:10px;min-width:0}
+.brand h1{font-size:19px;font-weight:700;letter-spacing:.5px;white-space:nowrap}
+.brand .sub{font-size:12px;color:var(--muted);letter-spacing:1px;white-space:nowrap}
+.conn{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.status-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border:1px solid var(--line);border-radius:2px;font-size:12px;color:var(--muted);background:var(--panel-2);white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.dot.live{background:var(--cyan);box-shadow:0 0 0 3px rgba(63,188,180,.15)}
+.dot.mock{background:var(--amber);box-shadow:0 0 0 3px rgba(240,168,60,.15)}
+.dot.err{background:var(--red)}
+#wsUrl{width:290px;min-width:150px;background:var(--panel-2);border:1px solid var(--line);color:var(--text);padding:6px 9px;font-family:var(--mono);font-size:12px;border-radius:2px}
+#wsUrl:focus{outline:none;border-color:var(--amber)}
+.btn{background:var(--panel-2);border:1px solid var(--line);color:var(--text);padding:6px 13px;font-size:12px;border-radius:2px;cursor:pointer;font-family:inherit;transition:border-color .15s,color .15s}
+.btn:hover{border-color:var(--amber);color:var(--amber)}
+.btn.primary{background:var(--amber);border-color:var(--amber);color:#12100a;font-weight:600}
+.btn.primary:hover{background:#f7bc5f;color:#12100a}
+.btn:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.ver{font-family:var(--mono);font-size:12px;color:var(--muted);padding:5px 10px;border:1px solid var(--line-soft);border-radius:2px;white-space:nowrap}
+.ver b{color:var(--text);font-weight:600}
+
+/* 告警条 */
+.alert{display:none;margin-top:12px;padding:10px 14px;background:rgba(217,100,90,.10);border:1px solid rgba(217,100,90,.45);border-radius:2px;font-size:12.5px;color:#f0b7b1;line-height:1.6}
+.alert.show{display:block}
+.alert b{color:#ffd7d2}
+
+/* 布局 */
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px;margin-top:16px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:3px;position:relative;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px 9px;border-bottom:1px solid var(--line-soft)}
+.panel-head h2{font-size:12.5px;font-weight:600;letter-spacing:.6px;color:var(--text)}
+.panel-head .note{font-size:11px;color:var(--muted);font-family:var(--mono);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* KPI */
+.kpis{grid-column:span 12;display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:14px 16px 13px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.kpi .k-label{font-size:11.5px;color:var(--muted);letter-spacing:.5px;display:flex;align-items:center;gap:6px}
+.kpi .k-label i{display:inline-block;width:3px;height:11px;background:var(--amber);flex:none}
+.kpi .k-val{font-family:var(--mono);font-size:30px;line-height:1.05;font-weight:600;letter-spacing:-.5px;font-variant-numeric:tabular-nums;word-break:break-all}
+.kpi .k-foot{font-size:11px;color:var(--muted);min-height:16px}
+.opt-strip{grid-column:span 12;display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:-4px}
+.opt{font-size:11.5px;color:var(--muted);padding:4px 10px;border:1px solid var(--line-soft);border-radius:2px;background:var(--panel-2);font-family:var(--mono)}
+.opt b{color:var(--text);font-weight:600}
+.opt.missing{color:#c98f87;border-color:rgba(217,100,90,.3)}
+
+.chart{grid-column:span 4}
+.chart.wide{grid-column:span 8}
+.chart.half{grid-column:span 6}
+.chart-box{width:100%;height:236px}
+.logpanel{grid-column:span 12}
+
+/* 连接信息卡 */
+.side{padding:6px 14px 14px;display:flex;flex-direction:column;gap:8px}
+.side-row{display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:6px 0;border-bottom:1px dashed var(--line-soft)}
+.side-row:last-child{border-bottom:0}
+.side-row .k{color:var(--muted);flex:none}
+.side-row .v{font-family:var(--mono);text-align:right;word-break:break-all;color:#c8d5e3;font-size:11.5px}
+.side input{width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--text);padding:6px 9px;font-family:var(--mono);font-size:11.5px;border-radius:2px}
+.side input:focus{outline:none;border-color:var(--amber)}
+.side-label{font-size:11px;color:var(--muted);margin-bottom:-2px}
+
+/* 日志 */
+.log-wrap{max-height:250px;overflow:auto}
+table.log{width:100%;border-collapse:collapse;table-layout:fixed;font-size:12px}
+col.c1{width:80px}col.c2{width:110px}col.c3{width:88px}col.c4{width:88px}col.c5{width:96px}col.c6{width:100px}col.c7{width:auto}
+table.log th{position:sticky;top:0;background:var(--panel-2);color:var(--muted);font-weight:500;text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);font-size:11px;letter-spacing:.4px;z-index:2}
+table.log td{padding:6px 10px;border-bottom:1px solid var(--line-soft);font-family:var(--mono);font-variant-numeric:tabular-nums;color:#c8d5e3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+table.log tr.stale td{color:var(--red)}
+.tag{display:inline-block;padding:1px 7px;border-radius:2px;font-size:11px;border:1px solid}
+.tag.ok{color:var(--cyan);border-color:rgba(63,188,180,.4);background:rgba(63,188,180,.08)}
+.tag.drop{color:var(--red);border-color:rgba(217,100,90,.4);background:rgba(217,100,90,.08)}
+.empty{color:var(--muted);padding:26px 14px;text-align:center;font-size:12px}
+
+/* 契约 */
+.contract{grid-column:span 12;padding:12px 14px;border:1px solid var(--line);border-radius:3px;background:var(--panel-2);font-size:12px;color:var(--muted)}
+.contract summary{cursor:pointer;color:var(--text);font-size:12.5px;font-weight:600}
+.contract pre{margin-top:10px;padding:11px;background:#080d13;border:1px solid var(--line-soft);border-radius:2px;overflow:auto;font-family:var(--mono);font-size:11.5px;line-height:1.6;color:#b9cade}
+.contract .tip{margin-top:9px;line-height:1.8}
+.contract .tip code{font-family:var(--mono);color:#d8e4f0;background:#0f1a24;padding:1px 5px;border-radius:2px}
+
+@media (max-width:1080px){
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .chart,.chart.wide,.chart.half{grid-column:span 6}
+  .brand h1{font-size:17px}
+}
+@media (max-width:720px){
+  body{padding:14px}
+  .kpis{grid-template-columns:1fr}
+  .chart,.chart.wide,.chart.half{grid-column:span 12}
+  .topbar{gap:10px}
+  #wsUrl{width:100%}
+  .kpi .k-val{font-size:26px}
+  .chart-box{height:210px}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <h1>事件统计大屏</h1>
+    <span class="sub">B 套 / WebSocket 广播 + REST 兜底</span>
+  </div>
+  <div class="conn">
+    <span class="status-pill"><span class="dot" id="statusDot"></span><span id="statusText">未连接</span></span>
+    <span class="ver">version <b id="verText">—</b></span>
+    <input id="wsUrl" value="ws://10.75.227.174:8080/ws/consult" spellcheck="false" aria-label="WebSocket 地址">
+    <button class="btn primary" id="btnConnect">连接</button>
+    <button class="btn" id="btnDisconnect">断开</button>
+    <button class="btn" id="btnReset">重置</button>
+  </div>
+</header>
+
+<div class="alert" id="rollbackAlert"></div>
+
+<main class="grid">
+
+  <section class="kpis" aria-label="关键指标">
+    <div class="kpi">
+      <span class="k-label"><i></i>事件总量</span>
+      <span class="k-val" id="kTotal">—</span>
+      <span class="k-foot">totalEvents · 已消费事件数</span>
+    </div>
+    <div class="kpi">
+      <span class="k-label"><i style="background:var(--cyan)"></i>活跃会话</span>
+      <span class="k-val" id="kSession">—</span>
+      <span class="k-foot">sessionCount · 按 session_id 去重</span>
+    </div>
+    <div class="kpi">
+      <span class="k-label"><i style="background:var(--red)"></i>待处理积压</span>
+      <span class="k-val" id="kBacklog">—</span>
+      <span class="k-foot">backlogCount · 生产数减已消费数</span>
+    </div>
+    <div class="kpi">
+      <span class="k-label"><i style="background:var(--amber)"></i>实时 TPS</span>
+      <span class="k-val" id="kTps">—</span>
+      <span class="k-foot" id="kTpsFoot">近 60 秒平均消费速率，条/秒</span>
+    </div>
+  </section>
+
+  <div class="opt-strip">
+    <span class="opt" id="optRate">消费成功率 <b>—</b></span>
+    <span class="opt" id="optDedup">幂等拦截 <b>—</b></span>
+    <span class="opt" id="optSnapTime">快照时间 <b>—</b></span>
+  </div>
+
+  <section class="panel chart wide">
+    <div class="panel-head"><h2>分钟事件趋势</h2><span class="note" id="noteTrend">minuteTrend</span></div>
+    <div class="chart-box" id="chartTrend"></div>
+  </section>
+
+  <section class="panel chart">
+    <div class="panel-head"><h2>事件类型分布</h2><span class="note">typeDistribution</span></div>
+    <div class="chart-box" id="chartTypes"></div>
+  </section>
+
+  <section class="panel chart half">
+    <div class="panel-head"><h2>积压趋势</h2><span class="note">本地累积，随快照刷新</span></div>
+    <div class="chart-box" id="chartBacklog"></div>
+  </section>
+
+  <section class="panel chart half">
+    <div class="panel-head"><h2>连接与校验</h2><span class="note">version 规则：只接受更大值</span></div>
+    <div class="side">
+      <span class="side-label">REST 兜底地址（重连后拉全量）</span>
+      <input id="restUrl" value="http://10.75.227.174:8080/api/v1/consult/snapshot" spellcheck="false" aria-label="REST 兜底地址">
+      <div class="side-row"><span class="k">已接收快照</span><span class="v" id="iRecv">0</span></div>
+      <div class="side-row"><span class="k">被丢弃</span><span class="v" id="iDrop">0</span></div>
+      <div class="side-row"><span class="k">最后收到</span><span class="v" id="iLast">—</span></div>
+      <div class="side-row"><span class="k">数据来源</span><span class="v" id="iSource">—</span></div>
+      <div class="side-row"><span class="k">断流判定</span><span class="v" id="iWatch">超过 5 秒无快照即重连</span></div>
+    </div>
+  </section>
+
+  <section class="panel logpanel">
+    <div class="panel-head"><h2>快照接收日志</h2><span class="note" id="noteLog">version 小于等于已展示值会被丢弃</span></div>
+    <div class="log-wrap">
+      <table class="log">
+        <colgroup>
+          <col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7">
+        </colgroup>
+        <thead><tr><th>version</th><th>事件总量</th><th>会话</th><th>积压</th><th>接收时间</th><th>状态</th><th>说明</th></tr></thead>
+        <tbody id="logBody">
+          <tr><td colspan="7" class="empty">还没有收到快照。点「连接」接真实端点，或看页面的模拟数据。</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <details class="contract">
+    <summary>后端字段契约（马智贤 2026-11-17 版）</summary>
+    <pre id="contractPre"></pre>
+    <div class="tip">
+      <b>经 Nginx 访问时：</b><code>/ws/</code> 走轮询，不同浏览器可能连到不同实例，各实例独立广播快照、version 并不同步。version 丢弃规则必须保留，否则会看到数据回退。<br>
+      <code>WS</code> 推的是裸快照对象，直接取消息体；<code>REST</code> 是统一包络，取 <code>data</code> 字段。两种入口用同一套 version 校验。<br>
+      重连后后端不会补发历史快照，页面在 WebSocket <code>onopen</code> 里立刻拉一次 REST 兜底，再接广播。<br>
+      事件类型已确认（张爱阳 2026-11-16）：本期只用 <code>view</code> / <code>favorite</code> / <code>order</code>，页面显示为浏览 / 收藏 / 下单，字段值不改。<br>
+      <b>如何改字段：</b>真实 JSON 与本页不一致时，改 <code>applySnapshot()</code> 里读取的字段名即可，图表不用动。
+    </div>
+  </details>
+</main>
+
+<script src="https://fastly.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+<script>
+/* ============================================================
+   后端契约（马智贤 2026-11-13 提供）
+   ------------------------------------------------------------
+   WS  : 裸快照对象，无 code/msg 包络
+   REST: { code, msg, data: 同一个快照对象 }
+   version = MAX(event_log.id)，可能重复、可能因重置种子回落
+   ============================================================ */
+const SNAPSHOT_EXAMPLE = {
+  version: 120,
+  totalEvents: 120,
+  sessionCount: 20,
+  typeDistribution: { view: 36, favorite: 34, order: 50 },
+  minuteTrend: [{ minute: "2026-11-13 21:32", count: 3 }],
+  backlogCount: 10,
+  snapshotTime: "2026-11-13T21:32:17",
+  tps: 4.0,
+  successRate: 1.0,
+  dedupBlocked: 0
+};
+document.getElementById("contractPre").textContent = JSON.stringify(SNAPSHOT_EXAMPLE, null, 2);
+
+/* 类型码 → 中文
+   张爱阳 2026-11-16 确认：本期就用 view / favorite / order 三个值，后端枚举不动，
+   页面上显示成「浏览 / 收藏 / 下单」，字段值不改。
+   goods_publish / report 演示后再扩，映射先留着，扩展时不用改代码。 */
+const TYPE_LABEL = {
+  view: "浏览",
+  favorite: "收藏",
+  order: "下单",
+  goods_publish: "商品发布",
+  order_create: "下单",
+  report: "举报"
+};
+const TYPE_PALETTE = ["#f0a83c", "#3fbcb4", "#7d93ad", "#d9645a", "#9a86c8"];
+
+/* ============================================================
+   状态
+   ============================================================ */
+const state = {
+  mode: "idle",           // idle | live | mock
+  version: -1,
+  totalEvents: null,
+  sessionCount: null,
+  backlog: null,
+  tps: null,
+  successRate: null,
+  dedup: null,
+  types: {},
+  minuteTrend: [],
+  backlogSeries: [],
+  received: 0,
+  dropped: 0,
+  rollbackStreak: 0,
+  lastMsgAt: 0,
+  lastSource: "—",
+  snapshotTime: "—",
+  log: []
+};
+
+const MAX_LOG = 42;
+const MAX_BACKLOG_POINTS = 60;
+const STALE_MS = 5000;   // 断流判定：5 秒没快照就重连（后端 250ms 一推，5 秒 = 20 个周期）
+
+/* ============================================================
+   WebSocket 客户端
+   - 指数退避重连
+   - 不发应用层心跳：后端没有 ping/pong 文本处理，浏览器也发不了原生 ping frame
+   - 存活判定改用「多久没收到快照」，由 watchdog 负责
+   ============================================================ */
+function createStatsSocket(opts) {
+  const url = opts.url;
+  const BACKOFF = [1000, 2000, 4000, 8000, 15000, 30000];
+  let ws = null, retry = 0, closedByUser = false, reTimer = null;
+
+  function clearRe() {
+    if (reTimer) { clearTimeout(reTimer); reTimer = null; }
+  }
+
+  function open() {
+    if (closedByUser) return;
+    try {
+      ws = new WebSocket(url);
+    } catch (e) {
+      opts.onStatus && opts.onStatus("error", "地址不合法：" + e.message);
+      return;
+    }
+    ws.onopen = () => {
+      retry = 0;
+      opts.onStatus && opts.onStatus("live", "已连接");
+      opts.onOpen && opts.onOpen();          // 立即拉 REST 兜底
+    };
+    ws.onmessage = (ev) => {
+      let data = null;
+      try { data = JSON.parse(ev.data); } catch (e) {
+        opts.onStatus && opts.onStatus("error", "快照不是合法 JSON");
+        return;
+      }
+      opts.onMessage && opts.onMessage(data, "ws");
+    };
+    ws.onerror = () => {
+      opts.onStatus && opts.onStatus("error", "连接异常");
+    };
+    ws.onclose = () => {
+      clearRe();
+      if (closedByUser) {
+        opts.onStatus && opts.onStatus("idle", "已断开");
+        return;
+      }
+      const wait = BACKOFF[Math.min(retry, BACKOFF.length - 1)];
+      retry++;
+      opts.onStatus && opts.onStatus("error", "连接断开，" + Math.round(wait / 1000) + " 秒后重试（第 " + retry + " 次）");
+      reTimer = setTimeout(open, wait);
+    };
+  }
+
+  open();
+
+  return {
+    close() {
+      closedByUser = true;
+      clearRe();
+      if (ws) { try { ws.close(); } catch (e) {} }
+    },
+    /* 断流时调用：关闭但不置 closedByUser，onclose 会触发自动重连 */
+    terminate() {
+      clearRe();
+      if (ws) { try { ws.close(); } catch (e) {} }
+    }
+  };
+}
+
+/* ============================================================
+   REST 兜底：包络取 data
+   ============================================================ */
+async function pullSnapshot(reason) {
+  const url = document.getElementById("restUrl").value.trim();
+  if (!/^https?:\/\//i.test(url)) {
+    setStatus("error", "REST 地址必须以 http:// 开头");
+    return;
+  }
+  try {
+    const resp = await fetch(url, { cache: "no-store" });
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const body = await resp.json();
+    /* 有包络先看 code：后端异常时 data 是 null，别把 {code:500} 当快照渲染 */
+    if (body && typeof body.code !== "undefined" && body.code !== 1) {
+      setStatus("error", "REST 兜底失败：后端返回 code=" + body.code + "（" + (body.msg || "无 msg") + "）");
+      return;
+    }
+    const snap = (body && body.data && typeof body.data === "object") ? body.data : body;
+    if (!snap || typeof snap.version !== "number") {
+      setStatus("error", "REST 返回里没有 version 字段，接口数据异常");
+      return;
+    }
+    onSnapshot(snap, "rest");
+    document.getElementById("iSource").textContent = "REST 兜底（" + (reason || "手动") + "）";
+  } catch (e) {
+    setStatus("error", "REST 兜底失败：" + e.message + "（演示可先用模拟模式）");
+  }
+}
+
+/* ============================================================
+   核心：收到一份快照
+   ============================================================ */
+function onSnapshot(snap, source) {
+  if (!snap || typeof snap !== "object") return;
+  if (typeof snap.version !== "number" || !isFinite(snap.version)) {
+    pushLog({ version: "—", accepted: false, reason: "version 缺失或非数字" });
+    return;
+  }
+
+  // ---- version 校验：小于等于当前值一律丢弃 ----
+  if (snap.version <= state.version) {
+    state.dropped++;
+    const isEqual = snap.version === state.version;
+    if (!isEqual) state.rollbackStreak++; else state.rollbackStreak = 0;
+
+    pushLog({
+      version: snap.version,
+      total: snap.totalEvents,
+      session: snap.sessionCount,
+      backlog: snap.backlogCount,
+      accepted: false,
+      reason: isEqual ? "与已展示 version 相同，丢弃" : "version 更低，丢弃"
+    });
+
+    if (state.rollbackStreak >= 5) showRollbackAlert();
+    renderChrome();
+    return;
+  }
+
+  // ---- 接受 ----
+  state.version = snap.version;
+  state.rollbackStreak = 0;
+  hideRollbackAlert();
+  state.received++;
+  state.lastMsgAt = Date.now();
+  state.lastSource = source === "rest" ? "REST" : "WebSocket";
+
+  state.totalEvents = numOr(snap.totalEvents, state.totalEvents);
+  state.sessionCount = numOr(snap.sessionCount, state.sessionCount);
+  state.backlog = numOr(snap.backlogCount, state.backlog);
+  state.tps = numOr(snap.tps, state.tps);                                  // 可选字段
+  state.successRate = numOr(snap.successRate ?? snap.success_rate, state.successRate);
+  state.dedup = numOr(snap.dedupBlocked ?? snap.dedup_blocked, state.dedup);
+  if (typeof snap.snapshotTime === "string") state.snapshotTime = snap.snapshotTime.replace("T", " ");
+
+  if (snap.typeDistribution && typeof snap.typeDistribution === "object") {
+    state.types = snap.typeDistribution;
+  }
+  if (Array.isArray(snap.minuteTrend)) {
+    state.minuteTrend = snap.minuteTrend.slice();
+  }
+  if (typeof state.backlog === "number") {
+    state.backlogSeries.push({
+      t: new Date().toLocaleTimeString("zh-CN", { hour12: false }),
+      v: state.backlog
+    });
+    if (state.backlogSeries.length > MAX_BACKLOG_POINTS) state.backlogSeries.shift();
+  }
+
+  pushLog({
+    version: snap.version,
+    total: snap.totalEvents,
+    session: snap.sessionCount,
+    backlog: snap.backlogCount,
+    accepted: true,
+    reason: source === "rest" ? "REST 兜底快照" : "—"
+  });
+
+  renderAll();
+}
+
+function numOr(v, fallback) {
+  return (typeof v === "number" && isFinite(v)) ? v : fallback;
+}
+
+/* ============================================================
+   日志
+   ============================================================ */
+function pushLog(row) {
+  state.log.unshift(row);
+  if (state.log.length > MAX_LOG) state.log.length = MAX_LOG;
+}
+
+const fmt = (n) => (typeof n === "number" && isFinite(n)) ? n.toLocaleString("zh-CN") : "—";
+
+function renderLog() {
+  const body = document.getElementById("logBody");
+  body.innerHTML = state.log.map((r) => {
+    const st = r.accepted
+      ? '<span class="tag ok">已接收</span>'
+      : '<span class="tag drop">丢弃</span>';
+    return `<tr class="${r.accepted ? "" : "stale"}">
+      <td>${r.version ?? "—"}</td>
+      <td>${fmt(r.total)}</td>
+      <td>${fmt(r.session)}</td>
+      <td>${fmt(r.backlog)}</td>
+      <td>${new Date().toLocaleTimeString("zh-CN", { hour12: false })}</td>
+      <td>${st}</td>
+      <td>${r.reason || "—"}</td>
+    </tr>`;
+  }).join("");
+}
+
+/* ============================================================
+   界面
+   ============================================================ */
+function setStatus(kind, text) {
+  const dot = document.getElementById("statusDot");
+  dot.className = "dot " + (kind === "live" ? "live" : kind === "mock" ? "mock" : kind === "error" ? "err" : "");
+  document.getElementById("statusText").textContent = text;
+}
+
+function showRollbackAlert() {
+  const el = document.getElementById("rollbackAlert");
+  el.innerHTML = "<b>检测到 version 连续回落。</b>连续 5 条快照的 version 都小于已展示值，常见两种原因：① 后端重置了种子数据（version = MAX(event_log.id) 会往回走）；② 经过 Nginx 时重连换到了另一个实例，各实例独立广播、version 不同步。确认后点右上角「重置」清掉本地基线，继续接收新快照。";
+  el.classList.add("show");
+}
+function hideRollbackAlert() {
+  document.getElementById("rollbackAlert").classList.remove("show");
+}
+
+function renderChrome() {
+  document.getElementById("verText").textContent = state.version >= 0 ? state.version : "—";
+  document.getElementById("iRecv").textContent = state.received;
+  document.getElementById("iDrop").textContent = state.dropped;
+  document.getElementById("iLast").textContent = state.lastMsgAt
+    ? new Date(state.lastMsgAt).toLocaleTimeString("zh-CN", { hour12: false })
+    : "—";
+  document.getElementById("iSource").textContent = state.mode === "mock" ? "模拟数据" : state.lastSource;
+}
+
+function renderKpis() {
+  document.getElementById("kTotal").textContent = fmt(state.totalEvents);
+  document.getElementById("kSession").textContent = fmt(state.sessionCount);
+  document.getElementById("kBacklog").textContent = fmt(state.backlog);
+  document.getElementById("kTps").textContent = (typeof state.tps === "number") ? state.tps : "—";
+
+  const rateEl = document.getElementById("optRate");
+  if (typeof state.successRate === "number") {
+    rateEl.className = "opt";
+    rateEl.innerHTML = "消费成功率 <b>" + (state.successRate <= 1 ? (state.successRate * 100).toFixed(1) + "%" : state.successRate + "%") + "</b>";
+  } else {
+    rateEl.className = "opt missing";
+    rateEl.innerHTML = "消费成功率 <b>待后端补字段</b>";
+  }
+
+  const dedupEl = document.getElementById("optDedup");
+  if (typeof state.dedup === "number") {
+    dedupEl.className = "opt";
+    dedupEl.innerHTML = "幂等拦截 <b>" + fmt(state.dedup) + "</b>";
+  } else {
+    dedupEl.className = "opt missing";
+    dedupEl.innerHTML = "幂等拦截 <b>待后端补字段</b>";
+  }
+
+  document.getElementById("optSnapTime").innerHTML = "快照时间 <b>" + (state.snapshotTime || "—") + "</b>";
+
+  renderChrome();
+}
+
+/* ============================================================
+   图表
+   ============================================================ */
+const AXIS_TEXT = { color: "#8fa3b8", fontSize: 11 };
+const GRID_LINE = { lineStyle: { color: "rgba(255,255,255,.07)" } };
+let charts = {};
+
+function baseAxis(opts) {
+  return Object.assign({
+    axisLine: { lineStyle: { color: "rgba(255,255,255,.14)" } },
+    axisTick: { show: false },
+    axisLabel: AXIS_TEXT,
+    splitLine: GRID_LINE
+  }, opts || {});
+}
+
+function initCharts() {
+  charts.trend = echarts.init(document.getElementById("chartTrend"));
+  charts.types = echarts.init(document.getElementById("chartTypes"));
+  charts.backlog = echarts.init(document.getElementById("chartBacklog"));
+
+  charts.trend.setOption({
+    grid: { left: 48, right: 20, top: 18, bottom: 30 },
+    tooltip: {
+      trigger: "axis", confine: true,
+      backgroundColor: "rgba(12,20,28,.94)",
+      borderColor: "rgba(255,255,255,.14)",
+      textStyle: { color: "#e7edf5", fontSize: 12 },
+      axisPointer: { lineStyle: { color: "rgba(240,168,60,.5)" } }
+    },
+    xAxis: baseAxis({ type: "category", boundaryGap: false, data: [], axisLabel: { color: "#8fa3b8", fontSize: 10, interval: 4 } }),
+    yAxis: baseAxis({ type: "value", name: "条", nameTextStyle: { color: "#8fa3b8", fontSize: 11 }, axisLabel: { color: "#8fa3b8", fontSize: 10 } }),
+    series: [{
+      name: "每分钟事件数", type: "line", smooth: 0.25, showSymbol: true, symbolSize: 4,
+      lineStyle: { width: 2, color: "#f0a83c" },
+      itemStyle: { color: "#f0a83c" },
+      areaStyle: { color: "rgba(240,168,60,.10)" },
+      data: []
+    }]
+  });
+
+  charts.types.setOption({
+    grid: { left: 62, right: 34, top: 12, bottom: 12 },
+    tooltip: { trigger: "item", confine: true, backgroundColor: "rgba(12,20,28,.94)", borderColor: "rgba(255,255,255,.14)", textStyle: { color: "#e7edf5", fontSize: 12 } },
+    xAxis: baseAxis({ type: "value", axisLabel: { color: "#8fa3b8", fontSize: 10 } }),
+    yAxis: baseAxis({ type: "category", data: [], axisLabel: { color: "#c8d5e3", fontSize: 11 }, splitLine: { show: false } }),
+    series: [{
+      type: "bar", barWidth: 13,
+      label: { show: true, position: "right", color: "#8fa3b8", fontSize: 11, formatter: "{c}" },
+      data: []
+    }]
+  });
+
+  charts.backlog.setOption({
+    grid: { left: 44, right: 18, top: 16, bottom: 30 },
+    tooltip: { trigger: "axis", confine: true, backgroundColor: "rgba(12,20,28,.94)", borderColor: "rgba(255,255,255,.14)", textStyle: { color: "#e7edf5", fontSize: 12 } },
+    xAxis: baseAxis({ type: "category", boundaryGap: false, data: [], axisLabel: { color: "#8fa3b8", fontSize: 10, interval: 11 } }),
+    yAxis: baseAxis({ type: "value", name: "条", nameTextStyle: { color: "#8fa3b8", fontSize: 11 }, axisLabel: { color: "#8fa3b8", fontSize: 10 } }),
+    series: [{
+      name: "积压", type: "line", smooth: 0.25, showSymbol: false,
+      lineStyle: { width: 2, color: "#d9645a" },
+      areaStyle: { color: "rgba(217,100,90,.10)" },
+      data: []
+    }]
+  });
+
+  window.addEventListener("resize", () => {
+    Object.values(charts).forEach((c) => c && c.resize());
+  });
+}
+
+function renderCharts() {
+  if (!charts.trend) return;
+
+  // 分钟趋势：截 "yyyy-MM-dd HH:mm" 的后 5 位作刻度
+  const trendX = state.minuteTrend.map((p) => String(p.minute || "").slice(-5));
+  const trendY = state.minuteTrend.map((p) => p.count);
+  charts.trend.setOption({
+    xAxis: { data: trendX },
+    series: [{ data: trendY }]
+  });
+  document.getElementById("noteTrend").textContent = trendX.length
+    ? trendX.length + " 个分钟点 · 最新 " + trendX[trendX.length - 1]
+    : "minuteTrend";
+
+  const typeKeys = Object.keys(state.types || {});
+  charts.types.setOption({
+    yAxis: { data: typeKeys.map((k) => TYPE_LABEL[k] || k) },
+    series: [{
+      data: typeKeys.map((k, i) => ({
+        value: state.types[k],
+        itemStyle: { color: TYPE_PALETTE[i % TYPE_PALETTE.length] }
+      }))
+    }]
+  });
+
+  charts.backlog.setOption({
+    xAxis: { data: state.backlogSeries.map((p) => p.t) },
+    series: [{ data: state.backlogSeries.map((p) => p.v) }]
+  });
+}
+
+function renderAll() {
+  renderKpis();
+  renderCharts();
+  renderLog();
+  renderChrome();
+}
+
+/* ============================================================
+   模拟数据（没有后端时完整演示 version 校验与全部图表）
+   ============================================================ */
+let mockTimer = null;
+let mockVer = 100;
+let mockTotal = 120;
+let mockSession = 20;
+let mockBacklog = 10;
+let mockTrend = [];
+
+function pad2(n) { return n < 10 ? "0" + n : "" + n; }
+function minuteKey(d) {
+  return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()) + " " + pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+}
+function isoLocal(d) {
+  return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()) + "T" +
+         pad2(d.getHours()) + ":" + pad2(d.getMinutes()) + ":" + pad2(d.getSeconds());
+}
+
+function seedMockTrend() {
+  mockTrend = [];
+  const base = new Date();
+  for (let i = 19; i >= 0; i--) {
+    const d = new Date(base.getTime() - i * 60000);
+    mockTrend.push({ minute: minuteKey(d), count: 2 + Math.floor(Math.random() * 9) });
+  }
+}
+
+function startMock() {
+  stopMock();
+  state.mode = "mock";
+  setStatus("mock", "演示模式 · 模拟数据");
+  document.getElementById("noteLog").textContent = "模拟数据，每 20 条故意重发一次相同 version 演示丢弃";
+  seedMockTrend();
+
+  const snapTypes = { view: 36, favorite: 34, order: 50 };
+
+  mockTimer = setInterval(() => {
+    mockVer++;
+    mockTotal += 3 + Math.floor(Math.random() * 7);
+    mockSession = 14 + Math.floor(Math.random() * 13);
+    // 积压大多数时候很小，偶尔抬一下
+    mockBacklog = Math.random() < 0.15
+      ? 12 + Math.floor(Math.random() * 22)
+      : 1 + Math.floor(Math.random() * 9);
+
+    const now = new Date();
+    const key = minuteKey(now);
+    const last = mockTrend[mockTrend.length - 1];
+    if (last && last.minute === key) {
+      last.count += 3 + Math.floor(Math.random() * 6);
+    } else {
+      mockTrend.push({ minute: key, count: 3 + Math.floor(Math.random() * 7) });
+      if (mockTrend.length > 30) mockTrend.shift();
+    }
+
+    Object.keys(snapTypes).forEach((k) => { snapTypes[k] += Math.floor(Math.random() * 4); });
+
+    const snap = {
+      version: mockVer,
+      totalEvents: mockTotal,
+      sessionCount: mockSession,
+      typeDistribution: Object.assign({}, snapTypes),
+      minuteTrend: mockTrend.slice(),
+      backlogCount: mockBacklog,
+      snapshotTime: isoLocal(now),
+      /* 这三个字段马智贤 2026-11-17 已补进快照 JSON。
+         tps = 近 60 秒平均消费速率；successRate 是 0~1 比例，显示时 ×100。 */
+      tps: Number((Math.random() * 6 + 0.5).toFixed(1)),
+      successRate: Number((0.985 + Math.random() * 0.015).toFixed(3)),
+      dedupBlocked: Math.floor(mockVer / 4)
+    };
+
+    onSnapshot(snap, "mock");
+
+    // 每 20 条重发一次同 version，演示「相等也丢弃」
+    if (mockVer % 20 === 0) {
+      setTimeout(() => {
+        onSnapshot(Object.assign({}, snap, { version: snap.version }), "mock");
+      }, 250);
+    }
+  }, 500);
+}
+
+function stopMock() {
+  if (mockTimer) { clearInterval(mockTimer); mockTimer = null; }
+}
+
+/* ============================================================
+   交互
+   ============================================================ */
+let sock = null;
+
+function connectLive() {
+  const url = document.getElementById("wsUrl").value.trim();
+  if (!/^wss?:\/\//i.test(url)) {
+    setStatus("error", "地址必须以 ws:// 或 wss:// 开头");
+    return;
+  }
+  stopMock();
+  if (sock) { sock.close(); sock = null; }
+  state.mode = "live";
+  state.lastMsgAt = 0;
+  setStatus("error", "正在连接…");
+  document.getElementById("noteLog").textContent = "version 小于等于已展示值会被丢弃";
+
+  sock = createStatsSocket({
+    url,
+    onStatus: (kind, text) => setStatus(kind, text),
+    onError: (text) => setStatus("error", text),
+    onMessage: (data, src) => onSnapshot(data, src),
+    onOpen: () => {
+      // 后端不补发历史快照，连上立刻拉一次 REST 全量
+      document.getElementById("iSource").textContent = "已连接，正在拉 REST 兜底…";
+      pullSnapshot("连接后兜底");
+    }
+  });
+}
+
+document.getElementById("btnConnect").addEventListener("click", connectLive);
+document.getElementById("btnDisconnect").addEventListener("click", () => {
+  if (sock) { sock.close(); sock = null; }
+  stopMock();
+  state.mode = "idle";
+  setStatus("idle", "已断开");
+  renderChrome();
+});
+document.getElementById("btnReset").addEventListener("click", () => {
+  state.version = -1;
+  state.received = 0;
+  state.dropped = 0;
+  state.rollbackStreak = 0;
+  state.backlogSeries = [];
+  state.log = [];
+  hideRollbackAlert();
+  document.getElementById("logBody").innerHTML =
+    '<tr><td colspan="7" class="empty">已重置版本基线。等待下一条快照。</td></tr>';
+  renderKpis();
+  renderCharts();
+  renderChrome();
+});
+document.getElementById("wsUrl").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") connectLive();
+});
+document.getElementById("restUrl").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") pullSnapshot("手动");
+});
+
+/* 断流检测：live 模式下超过 5 秒没快照，主动触发重连 */
+setInterval(() => {
+  if (state.mode !== "live" || !sock) return;
+  if (!state.lastMsgAt) return;   // 刚连上还没收到第一条，不判
+  const idle = Date.now() - state.lastMsgAt;
+  if (idle > STALE_MS) {
+    state.lastMsgAt = 0;
+    setStatus("error", "超过 " + Math.round(idle / 1000) + " 秒没有快照，主动重连");
+    sock.terminate();
+  }
+}, 1000);
+
+/* ============================================================
+   启动
+   ============================================================ */
+initCharts();
+renderKpis();
+renderChrome();
+startMock();
+</script>
+</body>
+</html>

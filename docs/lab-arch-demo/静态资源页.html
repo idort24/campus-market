@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>静态资源页 · 加载与缓存诊断</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23f4f5f2'/%3E%3Cpath d='M8 20 L16 10 L24 20' stroke='%230b7285' stroke-width='3' fill='none'/%3E%3Crect x='8' y='23' width='16' height='2' fill='%23101720'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#f4f5f2;
+  --card:#fffffe;
+  --ink:#101720;
+  --ink-2:#3d4c5c;
+  --muted:#7b8a99;
+  --line:#dfe3e0;
+  --accent:#0b7285;
+  --accent-2:#c2410c;
+  --ok:#0f766e;
+  --warn:#b45309;
+  --mono:"Cascadia Mono",Consolas,"SF Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;font-size:14px;line-height:1.55;padding:22px 20px 40px}
+.shell{max-width:1080px;margin:0 auto}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between;padding-bottom:14px;border-bottom:2px solid var(--ink)}
+h1{font-size:20px;font-weight:700;letter-spacing:.3px}
+header .sub{font-size:12px;color:var(--muted);margin-top:4px}
+header .tag{font-family:var(--mono);font-size:11.5px;color:var(--muted);padding:4px 9px;border:1px solid var(--line);background:var(--card);white-space:nowrap}
+
+/* 视觉验证区 */
+.visual{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:18px}
+.vcard{background:var(--card);border:1px solid var(--line);padding:14px 15px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.vcard h3{font-size:11.5px;font-weight:600;color:var(--muted);letter-spacing:.8px}
+.vcard .vbody{height:132px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;border:1px solid #edf0ee}
+.vcard .vfoot{font-size:11.5px;color:var(--muted);font-family:var(--mono)}
+#canvasAnim{width:100%;height:100%;display:block}
+.strip-img{width:100%;height:100%;object-fit:cover;display:block}
+.css-demo{width:100%;height:100%;background:
+  linear-gradient(135deg,#0b7285 0%,#0b7285 38%,#e3f0f2 38%,#e3f0f2 62%,#101720 62%,#101720 100%);
+  position:relative}
+.css-demo::after{content:"CSS 渐变 / 定位 / 过渡";position:absolute;left:10px;bottom:8px;font-size:11px;color:#fff;letter-spacing:.5px}
+.css-demo:hover{filter:saturate(1.15)}
+
+/* 表格 */
+section.block{margin-top:26px}
+.block-head{display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;justify-content:space-between;margin-bottom:10px}
+.block-head h2{font-size:14.5px;font-weight:700}
+.block-head .hint{font-size:12px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;table-layout:fixed;background:var(--card);font-size:12.5px}
+col.c1{width:auto}col.c2{width:78px}col.c3{width:96px}col.c4{width:96px}col.c5{width:88px}col.c6{width:108px}
+th{background:#ecefed;color:var(--ink-2);font-weight:600;text-align:left;padding:8px 11px;border-bottom:1px solid var(--line);font-size:11.5px}
+td{padding:7px 11px;border-bottom:1px solid #f0f2f0;font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+td.name{color:var(--ink);font-size:12px}
+.num{text-align:right}
+.empty{padding:22px;text-align:center;color:var(--muted);font-size:12.5px}
+.pill{display:inline-block;padding:1px 7px;font-size:11px;border:1px solid;border-radius:2px}
+.pill.hit{color:var(--ok);border-color:#a7d3cd;background:#e6f4f1}
+.pill.miss{color:var(--warn);border-color:#e5c59a;background:#fbf0e0}
+.pill.na{color:var(--muted);border-color:var(--line);background:#f4f5f2}
+
+/* 诊断卡 */
+.diag{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.dcard{background:var(--card);border:1px solid var(--line);padding:14px 15px;min-width:0}
+.dcard .dk{font-size:11.5px;color:var(--muted);margin-bottom:6px;letter-spacing:.4px}
+.dcard .dv{font-family:var(--mono);font-size:15px;word-break:break-all;color:var(--ink);line-height:1.35}
+.dcard .dn{font-size:11px;color:var(--muted);margin-top:6px}
+
+/* 结论 */
+.verdict{margin-top:14px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);padding:15px 17px;font-size:13px;line-height:1.75}
+.verdict .vrow{display:flex;gap:9px;align-items:flex-start;margin-bottom:7px}
+.verdict .vrow:last-child{margin-bottom:0}
+.verdict .mark{font-family:var(--mono);font-size:12px;flex:none;padding:1px 6px;border:1px solid;border-radius:2px;margin-top:2px}
+.mark.ok{color:var(--ok);border-color:#a7d3cd;background:#e6f4f1}
+.mark.warn{color:var(--warn);border-color:#e5c59a;background:#fbf0e0}
+.mark.info{color:var(--accent);border-color:#a9cfd6;background:#e3f0f2}
+.verdict code{font-family:var(--mono);background:#eef1ee;padding:1px 5px;border-radius:2px;font-size:12px}
+
+/* 操作 */
+.actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:16px}
+.btn{background:var(--ink);color:#fff;border:1px solid var(--ink);padding:7px 15px;font-size:13px;border-radius:2px;cursor:pointer;font-family:inherit}
+.btn:hover{background:#233140}
+.btn.ghost{background:var(--card);color:var(--ink);border-color:var(--line)}
+.btn.ghost:hover{background:#eef1ee;border-color:var(--ink)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+@media (max-width:900px){
+  .visual{grid-template-columns:1fr 1fr}
+  .diag{grid-template-columns:1fr 1fr}
+  .visual .vcard:last-child{grid-column:span 2}
+}
+@media (max-width:600px){
+  body{padding:16px 13px 30px}
+  .visual{grid-template-columns:1fr}
+  .visual .vcard:last-child{grid-column:span 1}
+  .diag{grid-template-columns:1fr}
+  table{font-size:11.5px}
+  col.c3,th:nth-child(3),td:nth-child(3){display:none}
+  h1{font-size:18px}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header>
+    <div>
+      <h1>静态资源页</h1>
+      <div class="sub">A 套 · 验证 Nginx 对静态资源的处理（加载耗时 / gzip / 缓存）</div>
+    </div>
+    <span class="tag" id="pageTag">读取中…</span>
+  </header>
+
+  <!-- 视觉验证 -->
+  <div class="visual">
+    <div class="vcard">
+      <h3>SVG 图片资源</h3>
+      <div class="vbody"><img class="strip-img" src="assets/纹理.svg" alt="SVG 纹理资源"></div>
+      <div class="vfoot" id="svgFoot">assets/纹理.svg</div>
+    </div>
+    <div class="vcard">
+      <h3>Canvas 动画</h3>
+      <div class="vbody"><canvas id="canvasAnim"></canvas></div>
+      <div class="vfoot" id="canvasFoot">requestAnimationFrame 运行中</div>
+    </div>
+    <div class="vcard">
+      <h3>CSS 渲染</h3>
+      <div class="vbody"><div class="css-demo"></div></div>
+      <div class="vfoot">渐变 / 伪元素 / hover 过渡</div>
+    </div>
+  </div>
+
+  <!-- 资源加载 -->
+  <section class="block">
+    <div class="block-head">
+      <h2>资源加载明细</h2>
+      <span class="hint">传输大小为 0 说明命中了本地缓存（第二次刷新会更明显）</span>
+    </div>
+    <table>
+      <colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"></colgroup>
+      <thead>
+        <tr><th>资源</th><th class="num">耗时</th><th class="num">传输</th><th class="num">解压后</th><th>缓存</th><th>类型</th></tr>
+      </thead>
+      <tbody id="resBody"><tr><td colspan="6" class="empty">正在读取 performance 数据…</td></tr></tbody>
+    </table>
+  </section>
+
+  <!-- 响应头诊断 -->
+  <section class="block">
+    <div class="block-head">
+      <h2>本页响应的头信息</h2>
+      <span class="hint">这组值直接反映 Nginx 有没有开 gzip、缓存多久</span>
+    </div>
+    <div class="diag">
+      <div class="dcard"><div class="dk">Content-Encoding</div><div class="dv" id="dEnc">—</div><div class="dn">gzip 是否生效</div></div>
+      <div class="dcard"><div class="dk">Cache-Control</div><div class="dv" id="dCache">—</div><div class="dn">静态资源缓存策略</div></div>
+      <div class="dcard"><div class="dk">Content-Length</div><div class="dv" id="dLen">—</div><div class="dn">线上传输字节</div></div>
+      <div class="dcard"><div class="dk">Server</div><div class="dv" id="dServer">—</div><div class="dn">响应方</div></div>
+    </div>
+    <div class="verdict" id="verdict">
+      <div class="vrow"><span class="mark info">…</span><span>正在检测。</span></div>
+    </div>
+  </section>
+
+  <div class="actions">
+    <button class="btn" id="btnRemeasure">重新测量</button>
+    <button class="btn ghost" id="btnCopyReport">复制诊断报告</button>
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   Canvas 动画：一条随时间推进的波形，验证 JS 与 rAF 可用
+   ============================================================ */
+(function canvasAnim() {
+  const cv = document.getElementById("canvasAnim");
+  const ctx = cv.getContext("2d");
+  let w = 0, h = 0, t = 0;
+
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    const box = cv.getBoundingClientRect();
+    w = box.width; h = box.height;
+    cv.width = Math.round(w * dpr);
+    cv.height = Math.round(h * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function draw() {
+    ctx.fillStyle = "#101720";
+    ctx.fillRect(0, 0, w, h);
+
+    // 网格
+    ctx.strokeStyle = "rgba(255,255,255,.08)";
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= w; x += 26) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+    }
+    for (let y = 0; y <= h; y += 26) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
+
+    // 波形
+    ctx.strokeStyle = "#3fbcb4";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let x = 0; x <= w; x += 2) {
+      const y = h / 2 + Math.sin((x / w) * Math.PI * 4 + t) * (h / 4) * Math.sin(t / 3 + 0.6);
+      if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // 扫描线
+    const sx = ((t * 40) % (w + 120)) - 60;
+    const grd = ctx.createLinearGradient(sx - 60, 0, sx, 0);
+    grd.addColorStop(0, "rgba(240,168,60,0)");
+    grd.addColorStop(1, "rgba(240,168,60,.55)");
+    ctx.fillStyle = grd;
+    ctx.fillRect(sx - 60, 0, 60, h);
+
+    t += 0.06;
+    requestAnimationFrame(draw);
+  }
+
+  resize();
+  window.addEventListener("resize", resize);
+  draw();
+  document.getElementById("canvasFoot").textContent = "canvas " + Math.round(cv.width) + "×" + Math.round(cv.height) + " · rAF 运行中";
+})();
+
+/* ============================================================
+   读取 performance 资源明细
+   ============================================================ */
+const fmtBytes = (n) => {
+  if (!n && n !== 0) return "—";
+  if (n === 0) return "0 B";
+  if (n < 1024) return n + " B";
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + " KB";
+  return (n / 1024 / 1024).toFixed(2) + " MB";
+};
+
+const TYPE_LABEL = {
+  img: "SVG 图片",
+  script: "脚本",
+  css: "样式表",
+  fetch: "fetch",
+  xmlhttprequest: "XHR",
+  navigation: "页面本身",
+  other: "其他"
+};
+
+function shortName(url) {
+  try {
+    const u = new URL(url, location.href);
+    const p = u.pathname.split("/").pop() || "/";
+    return decodeURIComponent(p);
+  } catch (e) { return url; }
+}
+
+function collectResources() {
+  const entries = performance.getEntriesByType("resource");
+  const rows = [];
+
+  // 页面自身
+  const nav = performance.getEntriesByType("navigation")[0];
+  if (nav) {
+    rows.push({
+      name: "（本页面）" + shortName(location.href),
+      duration: nav.duration,
+      transfer: nav.transferSize,
+      decoded: nav.decodedBodySize,
+      cache: nav.transferSize === 0 ? "命中" : "未命中",
+      type: "navigation"
+    });
+  }
+
+  entries.forEach((e) => {
+    // 只统计本页真正加载的资源（跳过第三方 CDN 的探测请求）
+    rows.push({
+      name: shortName(e.name),
+      duration: e.duration,
+      transfer: e.transferSize,
+      decoded: e.decodedBodySize,
+      cache: e.transferSize === 0 ? "命中" : "未命中",
+      type: e.initiatorType || "other"
+    });
+  });
+
+  return rows;
+}
+
+function renderResources() {
+  const rows = collectResources();
+  const body = document.getElementById("resBody");
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="6" class="empty">没有读到资源记录</td></tr>';
+    return rows;
+  }
+  body.innerHTML = rows.map((r) => {
+    const cacheCls = r.cache === "命中" ? "hit" : "miss";
+    return `<tr>
+      <td class="name" title="${r.name}">${r.name}</td>
+      <td class="num">${r.duration.toFixed(1)} ms</td>
+      <td class="num">${fmtBytes(r.transfer)}</td>
+      <td class="num">${fmtBytes(r.decoded)}</td>
+      <td><span class="pill ${cacheCls}">${r.cache}</span></td>
+      <td>${TYPE_LABEL[r.type] || r.type}</td>
+    </tr>`;
+  }).join("");
+  return rows;
+}
+
+/* ============================================================
+   读响应头（gzip / 缓存）
+   ============================================================ */
+let headerInfo = {
+  encoding: "—", cacheControl: "—", contentLength: "—", server: "—", etag: "—"
+};
+
+async function checkHeaders() {
+  if (location.protocol === "file:") {
+    headerInfo.server = "file://（无 HTTP 头）";
+    document.getElementById("dServer").textContent = headerInfo.server;
+    document.getElementById("pageTag").textContent = "本地文件模式";
+    renderVerdict("file");
+    return;
+  }
+  try {
+    const resp = await fetch(location.href, { method: "HEAD", cache: "no-store" });
+    headerInfo.encoding = resp.headers.get("content-encoding") || "未压缩";
+    headerInfo.cacheControl = resp.headers.get("cache-control") || "未设置";
+    headerInfo.etag = resp.headers.get("etag") || "未设置";
+    headerInfo.server = resp.headers.get("server") || "—";
+    const len = resp.headers.get("content-length");
+    headerInfo.contentLength = len ? fmtBytes(Number(len)) : "—";
+
+    document.getElementById("dEnc").textContent = headerInfo.encoding;
+    document.getElementById("dCache").textContent = headerInfo.cacheControl;
+    document.getElementById("dLen").textContent = headerInfo.contentLength;
+    document.getElementById("dServer").textContent = headerInfo.server;
+    document.getElementById("pageTag").textContent = headerInfo.server.slice(0, 28);
+    renderVerdict("http");
+  } catch (e) {
+    headerInfo.server = "读取失败";
+    document.getElementById("dServer").textContent = headerInfo.server;
+    document.getElementById("pageTag").textContent = "响应头读取失败";
+    renderVerdict("fail");
+  }
+}
+
+function renderVerdict(way) {
+  const box = document.getElementById("verdict");
+  const rows = [];
+
+  if (way === "file") {
+    rows.push({ cls: "info", text: "当前用 file:// 直接打开，读不到 HTTP 头，也测不出 Nginx 的 gzip 与缓存。要看真实效果，请通过 Nginx 入口地址访问本页。" });
+  } else if (way === "fail") {
+    rows.push({ cls: "warn", text: "响应头读取失败。检查页面是否能正常返回，或确认 Nginx 没有屏蔽 HEAD 请求。" });
+  } else {
+    const gz = /gzip|br|deflate/i.test(headerInfo.encoding);
+    rows.push(gz
+      ? { cls: "ok", text: "gzip 已生效（<code>Content-Encoding: " + headerInfo.encoding + "</code>），文本类资源会被压缩传输。" }
+      : { cls: "warn", text: "没有检测到压缩（<code>Content-Encoding: " + headerInfo.encoding + "</code>）。在 Nginx 里开 <code>gzip on;</code> 并加 <code>gzip_types</code>，HTML/CSS/JS/JSON 都能压到原来的 1/3 左右。" });
+
+    const hasCache = headerInfo.cacheControl !== "未设置";
+    if (hasCache) {
+      rows.push({ cls: "ok", text: "缓存策略已设置：<code>Cache-Control: " + headerInfo.cacheControl + "</code>。" + (headerInfo.etag !== "未设置" ? "同时有 ETag，支持协商缓存。" : "建议再加 ETag 支持条件请求。") });
+    } else {
+      rows.push({ cls: "warn", text: "没有 Cache-Control。静态资源建议设 <code>expires 7d</code> 或 <code>Cache-Control: max-age=604800</code>，否则每次刷新都重新拉。" });
+    }
+
+    rows.push({ cls: "info", text: "第二次刷新本页时，看上方表格「传输」列是否变成 <code>0 B</code>——是的话就说明缓存真的命中，这也是实验里最直接的截图证据。" });
+  }
+
+  box.innerHTML = rows.map((r) => `<div class="vrow"><span class="mark ${r.cls}">${r.cls === "ok" ? "通过" : r.cls === "warn" ? "待改" : "说明"}</span><span>${r.text}</span></div>`).join("");
+}
+
+/* ============================================================
+   交互
+   ============================================================ */
+function refreshAll() {
+  performance.clearResourceTimings();
+  renderResources();
+  checkHeaders();
+}
+
+document.getElementById("btnRemeasure").addEventListener("click", () => {
+  refreshAll();
+  document.getElementById("canvasFoot").textContent = "已重新测量 · " + new Date().toLocaleTimeString("zh-CN", { hour12: false });
+});
+
+document.getElementById("btnCopyReport").addEventListener("click", async () => {
+  const rows = collectResources();
+  const lines = [
+    "静态资源诊断报告",
+    "时间：" + new Date().toLocaleString("zh-CN", { hour12: false }),
+    "地址：" + location.href,
+    "",
+    "响应头：",
+    "  Content-Encoding: " + headerInfo.encoding,
+    "  Cache-Control: " + headerInfo.cacheControl,
+    "  ETag: " + headerInfo.etag,
+    "  Content-Length: " + headerInfo.contentLength,
+    "  Server: " + headerInfo.server,
+    "",
+    "资源明细："
+  ].concat(rows.map((r) => `  ${r.name}\t${r.duration.toFixed(1)}ms\t传输 ${fmtBytes(r.transfer)}\t解压后 ${fmtBytes(r.decoded)}\t${r.cache}`));
+  try {
+    await navigator.clipboard.writeText(lines.join("\n"));
+    document.getElementById("pageTag").textContent = "报告已复制";
+  } catch (e) {
+    document.getElementById("pageTag").textContent = "复制失败，请手动截图";
+  }
+});
+
+/* 启动 */
+renderResources();
+checkHeaders();
+</script>
+</body>
+</html>
