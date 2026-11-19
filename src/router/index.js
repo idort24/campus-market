@@ -10,7 +10,6 @@ import CategoryTree from '../views/CategoryTree.vue'
 import Login from '../views/Login.vue'
 import Register from '../views/Register.vue'
 import Forgot from '../views/Forgot.vue'
-import AdminPermission from '../views/AdminPermission.vue'
 import FileTransfer from '../views/FileTransfer.vue'
 
 // 管理员后台
@@ -51,8 +50,8 @@ const router = createRouter({
     { path: '/chat/:userId?', name: 'Chat', component: Chat, meta: { requiresAuth: true } },
     { path: '/report/:goodsId', name: 'Report', component: Report, meta: { requiresAuth: true } },
 
-    // 旧的权限占位页（保留兼容）
-    { path: '/admin/old', name: 'AdminPermission', component: AdminPermission, meta: { requiresAuth: true } },
+    // 旧的权限占位页已并入角色管理（AdminRoles），这里重定向避免旧链接 404
+    { path: '/admin/old', redirect: '/admin/roles' },
 
     // ===== 管理员后台（嵌套布局）=====
     // 每个子页声明所需权限码，守卫按后端下发的 perms 逐页校验

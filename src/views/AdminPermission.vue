@@ -1,3 +1,10 @@
+<!--
+  已废弃（legacy 占位页）。
+  本页里的 ROLES / RESOURCES / DEFAULT_PERMISSION 是早期写死的演示数据，不再使用。
+  当前入口统一走 /admin/roles（src/views/admin/AdminRoles.vue）：
+  角色支持新增 / 编辑 / 删除 / 启停，权限按角色分配并持久化。
+  路由已把 /admin/old 重定向到 /admin/roles，本文件仅留作对照，不参与构建。
+-->
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
