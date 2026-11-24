@@ -15,6 +15,11 @@ export default defineConfig({
       '/api': {
         target: BACKEND,
         changeOrigin: true
+      },
+      '/ws': {
+        target: BACKEND.replace(/^http/, 'ws'),
+        ws: true,
+        changeOrigin: true
       }
     }
   }
