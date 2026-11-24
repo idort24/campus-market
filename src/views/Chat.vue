@@ -5,11 +5,14 @@ import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getMessages, sendMessage, normalizeMessage } from '../api/chat.js'
 import { createChatSocket } from '../api/chatSocket.js'
+import { isAdmin } from '../utils/auth.js'
 
 const route = useRoute()
 
 // 对方 id：路由 /chat/:userId
 const peerId = computed(() => route.params.userId || route.query.userId || '')
+// 标题按当前角色区分：管理员（卖家侧）看买家，学生（买家侧）看卖家
+const titleText = computed(() => (isAdmin() ? '与买家聊天' : '与卖家聊天'))
 const messages = ref([])
 const input = ref('')
 const loading = ref(false)
@@ -89,7 +92,7 @@ async function send() {
     <main class="chat-container">
       <div class="chat-box">
         <div class="chat-header">
-          <span>与卖家聊天（用户 #{{ peerId || 1 }}）</span>
+          <span>{{ titleText }}（用户 #{{ peerId || 1 }}）</span>
           <span class="ws-status">
             <span :class="['ws-dot', online ? 'on' : 'off']"></span>
             {{ online ? '在线' : '重连中' }}
