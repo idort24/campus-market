@@ -14,8 +14,9 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     # 关键点：末尾加了 allowPublicKeyRetrieval=true，解决连接报错
     url: jdbc:mysql://localhost:3306/campus_market?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-    username: root
-    password: Root123456  # 换成你自己的数据库密码！！！
+    # 生产环境通过环境变量 DB_USERNAME / DB_PASSWORD 注入，仓库只保留本地开发兜底值
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:Root123456}
   # Redis：cache.store=redis 时才真正连；配 memory 时即使本机没起 Redis 也不影响启动
   data:
     redis:

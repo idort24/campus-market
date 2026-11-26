@@ -22,6 +22,9 @@ public final class CacheKeys {
     /** 登录失败次数限流：login:fail:{账号} */
     public static final String LOGIN_FAIL = "login:fail:";
 
+    /** 注册限流：register:limit:{学号}，10 分钟内最多 3 次 */
+    public static final String REGISTER_LIMIT = "register:limit:";
+
     /** 字典/静态数据缓存：dict:{类型} */
     public static final String DICT = "dict:";
 }

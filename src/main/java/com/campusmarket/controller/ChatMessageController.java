@@ -3,12 +3,17 @@ package com.campusmarket.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.campusmarket.common.R;
 import com.campusmarket.entity.ChatMessage;
+import com.campusmarket.entity.SysUser;
 import com.campusmarket.service.ChatMessageService;
+import com.campusmarket.service.SysUserService;
 import com.campusmarket.utils.UserContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -23,6 +28,63 @@ public class ChatMessageController {
 
     @Autowired
     private ChatMessageService chatMessageService;
+
+    @Autowired
+    private SysUserService sysUserService;
+
+    /**
+     * 会话列表 GET /api/v1/chat/sessions
+     * 按对方聚合：最后一条消息、最后时间、未读数（对方发给我且 read_flag=0）、对方昵称。
+     */
+    @GetMapping("/sessions")
+    public R<List<Map<String, Object>>> sessions() {
+        Long me = UserContext.getUserId();
+
+        List<ChatMessage> all = chatMessageService.lambdaQuery()
+                .and(w -> w.eq(ChatMessage::getSenderId, me).or().eq(ChatMessage::getReceiverId, me))
+                .orderByDesc(ChatMessage::getCreateTime)
+                .list();
+
+        Map<Long, Map<String, Object>> byPeer = new LinkedHashMap<>();
+        for (ChatMessage m : all) {
+            Long peer = m.getSenderId().equals(me) ? m.getReceiverId() : m.getSenderId();
+            if (peer == null) {
+                continue;
+            }
+            Map<String, Object> sess = byPeer.computeIfAbsent(peer, k -> {
+                Map<String, Object> s = new HashMap<>();
+                s.put("userId", k);
+                s.put("unreadCount", 0);
+                return s;
+            });
+            // 列表按时间倒序，第一条即最新
+            if (!sess.containsKey("lastMessage")) {
+                sess.put("lastMessage", m.getMsgContent() == null ? "" : m.getMsgContent());
+                sess.put("msgImage", m.getMsgImage());
+                sess.put("lastTime", m.getCreateTime());
+                sess.put("mineLast", m.getSenderId().equals(me));
+            }
+            if (m.getReceiverId().equals(me) && (m.getReadFlag() == null || m.getReadFlag() == 0)) {
+                sess.put("unreadCount", ((Number) sess.get("unreadCount")).intValue() + 1);
+            }
+        }
+
+        List<Long> peerIds = new ArrayList<>(byPeer.keySet());
+        Map<Long, String> nickMap = new HashMap<>();
+        if (!peerIds.isEmpty()) {
+            List<SysUser> users = sysUserService.listByIds(peerIds);
+            for (SysUser u : users) {
+                nickMap.put(u.getId(), u.getNickName());
+            }
+        }
+
+        List<Map<String, Object>> result = new ArrayList<>(byPeer.values());
+        for (Map<String, Object> s : result) {
+            Object uid = s.get("userId");
+            s.put("nickName", nickMap.getOrDefault(uid, "同学"));
+        }
+        return R.ok(result);
+    }
 
     /**
      * 拉取与某用户的会话历史 GET /api/v1/chat/messages?userId=对方id

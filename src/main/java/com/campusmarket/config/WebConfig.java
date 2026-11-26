@@ -32,7 +32,9 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/v1/category/list",
                         "/api/v1/category/children/*",
                         "/api/v1/evaluation/toUser/*",
-                        "/api/v1/file/**",
+                        // 文件下载公开（商品图片需在列表/详情直接展示）；
+                        // 上传类接口（upload/init|chunk|merge|batch）必须登录，不再整段放行
+                        "/api/v1/file/download/**",
                         // MQ 演示：咨询事件投递与查询，联调 / 大屏演示免登录
                         "/api/v1/consult/**"
                 );

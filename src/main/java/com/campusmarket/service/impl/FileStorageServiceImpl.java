@@ -67,6 +67,14 @@ public class FileStorageServiceImpl implements FileStorageService {
     /** 上传会话元信息文件名 */
     private static final String SESSION_META = "meta.json";
 
+    /** 允许上传的图片扩展名白名单（F3：禁止上传可执行/网页类文件） */
+    private static final Set<String> ALLOWED_EXT = Set.of(
+            ".jpg", ".jpeg", ".png", ".gif", ".webp"
+    );
+
+    /** 单张图片最大 5MB */
+    private static final long MAX_IMAGE_SIZE = 5L * 1024 * 1024L;
+
     /** uploadId -> 上传会话 */
     private final Map<String, FileUploadSession> sessions =
             new ConcurrentHashMap<>();
@@ -183,6 +191,11 @@ public class FileStorageServiceImpl implements FileStorageService {
 
         if (fileName == null || fileName.trim().isEmpty()) {
             throw new IllegalArgumentException("文件名不能为空");
+        }
+
+        String ext = normalizeExt(fileName);
+        if (!ALLOWED_EXT.contains(ext)) {
+            throw new IllegalArgumentException("仅支持 JPG/PNG/GIF/WEBP 图片");
         }
 
         if (fileSize <= 0 || chunkSize <= 0 || totalChunks <= 0) {
@@ -479,7 +492,20 @@ public class FileStorageServiceImpl implements FileStorageService {
                     continue;
                 }
 
-                String ext = extractExt(f.getOriginalFilename());
+                String ext = normalizeExt(f.getOriginalFilename());
+
+                if (!ALLOWED_EXT.contains(ext)) {
+                    item.setSuccess(false);
+                    item.setMsg("仅支持 JPG/PNG/GIF/WEBP 图片");
+                    results.add(item);
+                    continue;
+                }
+                if (f.getSize() > MAX_IMAGE_SIZE) {
+                    item.setSuccess(false);
+                    item.setMsg("图片不能超过 5MB");
+                    results.add(item);
+                    continue;
+                }
 
                 String fileId =
                         UUID.randomUUID().toString().replace("-", "");
@@ -580,6 +606,17 @@ public class FileStorageServiceImpl implements FileStorageService {
                     e.getMessage()
             );
         }
+    }
+
+    /**
+     * 获取文件扩展名（小写、带点）
+     */
+    private String normalizeExt(String fileName) {
+        if (fileName == null) {
+            return "";
+        }
+        int dot = fileName.lastIndexOf('.');
+        return dot >= 0 ? fileName.substring(dot).toLowerCase() : "";
     }
 
     /**

@@ -51,6 +51,16 @@ import java.util.Map;
 @RequestMapping("/api/v1/file")
 public class FileController {
 
+    /** 图片扩展名 → Content-Type（商品图片需在 <img> 内联展示） */
+    private static final Map<String, MediaType> IMAGE_MEDIA = new HashMap<>();
+    static {
+        IMAGE_MEDIA.put(".jpg", MediaType.IMAGE_JPEG);
+        IMAGE_MEDIA.put(".jpeg", MediaType.IMAGE_JPEG);
+        IMAGE_MEDIA.put(".png", MediaType.IMAGE_PNG);
+        IMAGE_MEDIA.put(".gif", MediaType.IMAGE_GIF);
+        IMAGE_MEDIA.put(".webp", MediaType.parseMediaType("image/webp"));
+    }
+
     @Autowired
     private FileStorageService fileStorageService;
 
@@ -254,10 +264,17 @@ public class FileController {
 
         long total = Files.size(path);
 
-        MediaType contentType = MediaType.APPLICATION_OCTET_STREAM;
+        String ext = "";
+        String name = stored.getFileName();
+        if (name != null) {
+            int dot = name.lastIndexOf('.');
+            ext = dot >= 0 ? name.substring(dot).toLowerCase() : "";
+        }
+        boolean inline = IMAGE_MEDIA.containsKey(ext);
+        MediaType contentType = IMAGE_MEDIA.getOrDefault(ext, MediaType.APPLICATION_OCTET_STREAM);
 
         String disposition =
-                "attachment; filename=\"" + stored.getFileName() + "\"";
+                (inline ? "inline" : "attachment") + "; filename=\"" + stored.getFileName() + "\"";
 
         // 没有 Range 请求头，返回完整文件
         if (rangeHeader == null) {

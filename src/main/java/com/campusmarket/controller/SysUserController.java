@@ -183,16 +183,38 @@ public class SysUserController {
         // 必填校验
         String studentNo = sysUser.getStudentNo();
         String phone = sysUser.getPhone();
+        String email = sysUser.getEmail();
         if (studentNo == null || studentNo.trim().isEmpty()) {
             return R.fail("学号不能为空");
         }
-        if (sysUser.getPassword() == null || sysUser.getPassword().trim().isEmpty()) {
+        studentNo = studentNo.trim();
+
+        // 注册限流：同学号 10 分钟内最多尝试 3 次，防脚本批量注册
+        String regKey = CacheKeys.REGISTER_LIMIT + studentNo;
+        String regStr = cacheStore.get(regKey);
+        int regCount = regStr == null ? 0 : Integer.parseInt(regStr);
+        if (regCount >= 3) {
+            return R.error(429, "注册过于频繁，请 10 分钟后再试");
+        }
+
+        String rawPwd = sysUser.getPassword() == null ? "" : sysUser.getPassword().trim();
+        if (rawPwd.isEmpty()) {
             return R.fail("密码不能为空");
+        }
+        // 密码强度：8 位以上，必须同时包含字母和数字
+        if (!rawPwd.matches("^(?=.*[A-Za-z])(?=.*\\d).{8,}$")) {
+            return R.fail("密码需 8 位以上，且同时包含字母和数字");
         }
         // 手机号格式校验（11 位大陆手机号）
         if (phone == null || !phone.matches("^1[3-9]\\d{9}$")) {
             return R.fail("请输入正确的手机号");
         }
+        phone = phone.trim();
+        // 邮箱格式校验（注册即绑定邮箱，供邮箱验证码登录使用）
+        if (email == null || !email.matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+            return R.fail("请输入正确的邮箱地址");
+        }
+        email = email.trim().toLowerCase();
 
         // 判断学号是否重复
         Long count = sysUserService.lambdaQuery()
@@ -208,13 +230,33 @@ public class SysUserController {
         if (phoneCount > 0) {
             return R.fail("该手机号已被注册");
         }
+        // 判断邮箱是否重复：一个邮箱只能绑定一个账号
+        Long emailCount = sysUserService.lambdaQuery()
+                .eq(SysUser::getEmail, email)
+                .count();
+        if (emailCount > 0) {
+            return R.fail("该邮箱已被注册");
+        }
+
+        // 昵称兜底：未填时用学号后四位生成，避免非空唯一列落库失败
+        String nickName = sysUser.getNickName();
+        if (nickName == null || nickName.trim().isEmpty()) {
+            String tail = studentNo.length() > 4 ? studentNo.substring(studentNo.length() - 4) : studentNo;
+            sysUser.setNickName("同学" + tail);
+        }
+        sysUser.setStudentNo(studentNo);
+        sysUser.setPhone(phone);
+        sysUser.setEmail(email);
 
         // ✅ 用你 PasswordUtil 的 encrypt 加密（BCrypt：自带随机盐，同一密码不同人密文不同）
-        String encodePwd = PasswordUtil.encrypt(sysUser.getPassword());
+        cacheStore.set(regKey, String.valueOf(regCount + 1), 600);
+        String encodePwd = PasswordUtil.encrypt(rawPwd);
         sysUser.setPassword(encodePwd);
         sysUser.setId(null);
         boolean save = sysUserService.save(sysUser);
         if(save){
+            // 注册成功，清掉限流计数
+            cacheStore.delete(regKey);
             // 注册成功后默认绑定 STUDENT 角色（RBAC 权限）
             rbacService.bindDefaultRole(sysUser.getId());
             return R.ok("注册成功");

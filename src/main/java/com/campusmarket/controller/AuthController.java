@@ -191,8 +191,8 @@ public class AuthController {
         if (!phone.matches("^1[3-9]\\d{9}$")) {
             return R.error(400, "请输入正确的手机号");
         }
-        if (newPassword == null || newPassword.trim().length() < 6) {
-            return R.error(400, "新密码至少 6 位");
+        if (newPassword == null || !newPassword.matches("^(?=.*[A-Za-z])(?=.*\\d).{8,}$")) {
+            return R.error(400, "新密码需 8 位以上，且同时包含字母和数字");
         }
         if (captchaEnabled && !captchaService.verify(param.get("captchaKey"), param.get("captchaCode"))) {
             return R.error(400, "验证码错误或已失效，请刷新后重试");
