@@ -32,6 +32,19 @@ function qualityToText(quality) {
   return QUALITY_MAP[quality] || String(quality)
 }
 
+/** 后端 images 存 JSON 字符串 ["url1","url2"]，统一解析成数组，容错空值/脏数据 */
+function parseImages(g = {}) {
+  const raw = g.images
+  if (!raw) return []
+  if (Array.isArray(raw)) return raw.filter(Boolean)
+  try {
+    const arr = JSON.parse(raw)
+    return Array.isArray(arr) ? arr.filter(Boolean) : []
+  } catch {
+    return []
+  }
+}
+
 /**
  * 后端商品对象 → 页面使用的商品对象
  * 同时保留原始字段（raw），方便排查联调时的字段差异
@@ -51,7 +64,8 @@ export function normalizeGoods(g = {}) {
     sellerId: g.sellerId ?? g.seller_id ?? null,
     location: g.tradePlace ?? g.location ?? '同校交易',
     description: g.description ?? '',
-    images: g.images ?? null,
+    images: parseImages(g),
+    cover: parseImages(g)[0] ?? null,
     icon: g.icon ?? iconOfCategory(g.category ?? CATEGORY_NAME_BY_ID[categoryId]),
     goodsStatus: g.goodsStatus ?? g.goods_status ?? 'ON_SHELF',
     auditStatus: g.auditStatus ?? g.audit_status ?? 'PASS',

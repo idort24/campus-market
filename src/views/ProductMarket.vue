@@ -83,7 +83,10 @@ async function toggleFavorite(product) {
 
       <div v-if="filteredProducts.length" class="goods-grid">
         <div v-for="p in filteredProducts" :key="p.id" class="goods-card" @click="goDetail(p.id)">
-          <div class="goods-img">{{ p.icon }}</div>
+          <div class="goods-img">
+            <img v-if="p.cover" :src="p.cover" :alt="p.name" />
+            <template v-else>{{ p.icon }}</template>
+          </div>
           <div class="goods-body">
             <div class="goods-title">{{ p.name }}</div>
             <div class="goods-meta">{{ p.category }} · {{ p.location || '同校交易' }}</div>
@@ -136,7 +139,8 @@ async function toggleFavorite(product) {
 .goods-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
 .goods-card { background: #fff; border-radius: 16px; overflow: hidden; cursor: pointer; transition: all .2s; }
 .goods-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
-.goods-img { height: 160px; display: flex; align-items: center; justify-content: center; font-size: 56px; background: #f1f5f9; }
+.goods-img { height: 160px; display: flex; align-items: center; justify-content: center; font-size: 56px; background: #f1f5f9; overflow: hidden; }
+.goods-img img { width: 100%; height: 100%; object-fit: cover; }
 .goods-body { padding: 12px 14px 14px; }
 .goods-title { font-size: 14px; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .goods-meta { font-size: 12px; color: #94a3b8; margin-top: 4px; }

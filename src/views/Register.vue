@@ -17,6 +17,7 @@ const loading = ref(false)
 const form = ref({
   studentNo: '',
   phone: '',
+  email: '',
   password: '',
   confirmPassword: '',
 })
@@ -25,7 +26,7 @@ const errors = ref({})
 
 const canSubmit = computed(() => {
   const f = form.value
-  return f.studentNo && f.phone && f.password && f.confirmPassword
+  return f.studentNo && f.phone && f.email && f.password && f.confirmPassword
 })
 
 function validate() {
@@ -33,7 +34,8 @@ function validate() {
   const e = {}
   if (!/^\d{8,12}$/.test(f.studentNo.trim())) e.studentNo = '学号应为 8-12 位数字'
   if (!/^1[3-9]\d{9}$/.test(f.phone.trim())) e.phone = '请输入正确的 11 位手机号'
-  if (!f.password || f.password.length < 6) e.password = '密码至少 6 位'
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) e.email = '请输入正确的邮箱地址'
+  if (!/^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(f.password || '')) e.password = '密码需 8 位以上，且同时包含字母和数字'
   if (f.confirmPassword !== f.password) e.confirmPassword = '两次输入的密码不一致'
   errors.value = e
   return Object.keys(e).length === 0
@@ -46,6 +48,7 @@ async function submit() {
     await register({
       studentNo: form.value.studentNo.trim(),
       phone: form.value.phone.trim(),
+      email: form.value.email.trim().toLowerCase(),
       password: form.value.password,
     })
     ElMessage.success('注册成功，请登录')
@@ -83,8 +86,14 @@ async function submit() {
         </label>
 
         <label class="field">
+          <span class="label-text">邮箱</span>
+          <input v-model="form.email" placeholder="用于邮箱验证码登录，如 2024xxxx@campus.edu" maxlength="64" />
+          <span v-if="errors.email" class="err">{{ errors.email }}</span>
+        </label>
+
+        <label class="field">
           <span class="label-text">密码</span>
-          <input v-model="form.password" type="password" placeholder="至少 6 位" autocomplete="new-password" />
+          <input v-model="form.password" type="password" placeholder="8 位以上，含字母和数字" autocomplete="new-password" />
           <span v-if="errors.password" class="err">{{ errors.password }}</span>
         </label>
 

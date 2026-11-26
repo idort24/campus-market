@@ -6,27 +6,51 @@ import { ElMessage } from 'element-plus'
 import { fetchProductById } from '../api/product.js'
 import { USE_MOCK } from '../api/config.js'
 import { addFavorite, removeFavorite, hasFavorite } from '../api/favorites.js'
+import { getEvaluationsToUser } from '../api/evaluation.js'
 
 const route = useRoute()
 const router = useRouter()
 const userInfo = computed(() => { try { return JSON.parse(localStorage.getItem('userInfo') || '{}') } catch { return {} } })
 const isAdmin = computed(() => userInfo.value?.roleCode === 'ADMIN')
+const currentUserId = computed(() => userInfo.value?.id ?? null)
 
 const product = ref(null)
 const loading = ref(false)
 const isFav = ref(false)
+const mainImage = ref(null)
+const reviews = ref([])
+
+// 自己发布的商品不显示联系卖家入口
+const canContact = computed(() =>
+  product.value?.sellerId != null &&
+  String(product.value.sellerId) !== String(currentUserId.value)
+)
+
+function goChat() {
+  if (product.value?.sellerId != null) {
+    router.push(`/chat/${product.value.sellerId}`)
+  }
+}
 
 // 根据路由中的商品 ID 从接口获取商品
 async function loadDetail() {
   loading.value = true
   try {
     product.value = await fetchProductById(route.params.id)
+    mainImage.value = product.value?.cover || null
     // 收藏按钮状态以后端为准（GET /goodsCollect/has/{goodsId}），失败就当未收藏
     if (product.value) {
       try {
         isFav.value = await hasFavorite(product.value.id)
       } catch {
         isFav.value = false
+      }
+      if (product.value.sellerId != null) {
+        try {
+          reviews.value = await getEvaluationsToUser(product.value.sellerId)
+        } catch {
+          reviews.value = []
+        }
       }
     }
   } catch (e) {
@@ -73,8 +97,20 @@ function goBack() {
     <main class="detail-container">
       <div v-if="product" class="detail-card">
         <!-- 商品图片区域 -->
-        <div class="product-image">
-          {{ product.icon }}
+        <div class="product-media">
+          <div class="product-image">
+            <img v-if="mainImage" :src="mainImage" :alt="product.name" />
+            <template v-else>{{ product.icon }}</template>
+          </div>
+          <div v-if="product.images && product.images.length > 1" class="thumbs">
+            <img
+              v-for="url in product.images"
+              :key="url"
+              :src="url"
+              :class="{ active: url === mainImage }"
+              @click="mainImage = url"
+            />
+          </div>
         </div>
 
         <!-- 商品信息区域 -->
@@ -110,6 +146,19 @@ function goBack() {
             </p>
           </div>
 
+          <!-- 卖家收到的评价 -->
+          <div class="review-section">
+            <h3>买家评价（{{ reviews.length }}）</h3>
+            <div v-if="!reviews.length" class="review-empty">暂无评价</div>
+            <div v-for="r in reviews" :key="r.id" class="review-item">
+              <div class="review-top">
+                <span class="review-stars">{{ '★'.repeat(r.score) }}{{ '☆'.repeat(5 - r.score) }}</span>
+                <span class="review-time">{{ r.createTime }}</span>
+              </div>
+              <p class="review-content">{{ r.content }}</p>
+            </div>
+          </div>
+
           <!-- 提示信息 -->
           <div v-if="USE_MOCK" class="notice">
             当前数据来自前端接口层（Mock 模式），接入后端后将读取真实商品数据。
@@ -125,6 +174,10 @@ function goBack() {
               @click="toggleFavorite"
             >
               {{ isFav ? '❤️ 已收藏' : '🤍 收藏' }}
+            </button>
+
+            <button v-if="canContact" class="chat-btn" @click="goChat">
+              💬 联系卖家
             </button>
 
             <button class="back-btn" @click="goBack">
@@ -189,6 +242,7 @@ function goBack() {
 }
 
 /* 商品图片 */
+.product-media { display: flex; flex-direction: column; gap: 10px; }
 .product-image {
   min-height: 350px;
   display: flex;
@@ -197,7 +251,15 @@ function goBack() {
   background: linear-gradient(135deg, #f5f5f4, #fafaf9);
   border-radius: 12px;
   font-size: 120px;
+  overflow: hidden;
 }
+.product-image img { width: 100%; height: 100%; object-fit: cover; }
+.thumbs { display: flex; gap: 8px; flex-wrap: wrap; }
+.thumbs img {
+  width: 64px; height: 64px; object-fit: cover; border-radius: 8px;
+  border: 2px solid #e2e8f0; cursor: pointer;
+}
+.thumbs img.active { border-color: #2563eb; }
 
 /* 商品信息 */
 .product-info {
@@ -259,6 +321,15 @@ function goBack() {
   font-weight: 600;
 }
 
+.review-section { margin-top: 20px; }
+.review-section h3 { font-size: 15px; margin: 0 0 12px; }
+.review-empty { color: #94a3b8; font-size: 13px; }
+.review-item { padding: 12px 0; border-bottom: 1px solid #f1f5f9; }
+.review-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.review-stars { color: #f59e0b; font-size: 13px; letter-spacing: 2px; }
+.review-time { font-size: 11px; color: #94a3b8; }
+.review-content { margin: 0; font-size: 13px; color: #475569; overflow-wrap: anywhere; }
+
 /* 演示提示 */
 .notice {
   margin: 25px 0;
@@ -310,6 +381,21 @@ function goBack() {
 .fav-btn.active {
   background: #fff0f0;
   border-color: #ff6b6b;
+}
+
+.chat-btn {
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #2563eb;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: 0.2s;
+}
+
+.chat-btn:hover {
+  background: #dbeafe;
 }
 
 /* 商品不存在 */

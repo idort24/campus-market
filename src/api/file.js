@@ -7,12 +7,17 @@
 
 const BASE = '/api/v1/file'
 
-// 后端统一返回结构 R<T> = { code, msg, data }
-// 成功 code=1（R.ok）；业务错误 code=500；未登录 401；无权限 403；HTTP 层失败走非 2xx
+/** 取本地登录令牌；未登录返回空串 */
+function authToken() {
+  return localStorage.getItem('token') || ''
+}
 
 /** 通用请求：解析 R 结构，业务失败抛异常 */
 async function request(url, options) {
-  const res = await fetch(url, options)
+  const headers = { ...(options?.headers || {}) }
+  const token = authToken()
+  if (token) headers.Authorization = `Bearer ${token}`
+  const res = await fetch(url, { ...options, headers })
   // 下载等非 JSON 响应由调用方自行处理
   const text = await res.text()
   let json = null
@@ -36,6 +41,8 @@ function postFormWithProgress(url, formData, onProgress) {
     const xhr = new XMLHttpRequest()
     xhr.open('POST', url)
     xhr.responseType = 'json'
+    const token = authToken()
+    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)
     xhr.onload = () => {
       const r = xhr.response
       if (xhr.status >= 200 && xhr.status < 300 && r) {

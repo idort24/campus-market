@@ -1,19 +1,21 @@
 <script setup>
 import NavBar from '../components/NavBar.vue'
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getMessages, sendMessage, normalizeMessage } from '../api/chat.js'
+import { getMessages, getSessions, sendMessage, normalizeMessage } from '../api/chat.js'
 import { createChatSocket } from '../api/chatSocket.js'
 import { isAdmin } from '../utils/auth.js'
 
 const route = useRoute()
+const router = useRouter()
 
 // 对方 id：路由 /chat/:userId
 const peerId = computed(() => route.params.userId || route.query.userId || '')
 // 标题按当前角色区分：管理员（卖家侧）看买家，学生（买家侧）看卖家
 const titleText = computed(() => (isAdmin() ? '与买家聊天' : '与卖家聊天'))
 const messages = ref([])
+const sessions = ref([])
 const input = ref('')
 const loading = ref(false)
 const sending = ref(false)
@@ -21,7 +23,19 @@ const online = ref(false)
 
 let socket = null
 
+async function loadSessions() {
+  try {
+    sessions.value = await getSessions()
+  } catch {
+    // 会话列表失败不阻断对话窗
+  }
+}
+
 async function load() {
+  if (!peerId.value) {
+    messages.value = []
+    return
+  }
   loading.value = true
   try {
     // 后端：GET /api/v1/chat/messages?userId=对方id（进入会话自动把对方发的置为已读）
@@ -33,6 +47,16 @@ async function load() {
   }
 }
 
+function openSession(userId) {
+  if (userId != null) router.push(`/chat/${userId}`)
+}
+
+// 最后一条消息时间只展示「MM-dd HH:mm」
+function formatTime(t) {
+  if (!t) return ''
+  return String(t).replace('T', ' ').slice(5, 16)
+}
+
 // WebSocket 推送回调：新消息入库后服务端推给接收方；ack 是发送方自己消息的落库回执
 function handleSocketMessage(payload) {
   if (!payload.msg) {
@@ -42,7 +66,11 @@ function handleSocketMessage(payload) {
   const m = normalizeMessage(payload.msg)
   if (payload.type === 'message') {
     // 只接收当前会话对方发来的消息
-    if (String(m.senderId) !== String(peerId.value)) return
+    if (String(m.senderId) !== String(peerId.value)) {
+      // 来自其他会话：刷新会话列表的未读与最后一条
+      loadSessions()
+      return
+    }
     messages.value.push(m)
   } else if (payload.type === 'ack') {
     if (!messages.value.some((x) => x.id && x.id === m.id)) messages.value.push(m)
@@ -52,6 +80,7 @@ function handleSocketMessage(payload) {
 }
 
 onMounted(async () => {
+  await loadSessions()
   await load()
   const token = localStorage.getItem('token')
   if (token) {
@@ -65,6 +94,12 @@ onMounted(async () => {
 
 onUnmounted(() => socket?.close())
 
+// 切换会话：重新拉历史并刷新列表未读
+watch(peerId, async () => {
+  await load()
+  await loadSessions()
+})
+
 async function send() {
   const content = input.value.trim()
   if (!content || sending.value) return
@@ -77,6 +112,7 @@ async function send() {
       if (msg) messages.value.push(msg)
     }
     input.value = ''
+    loadSessions()
   } catch (e) {
     ElMessage.error(e.message || '发送失败')
   } finally {
@@ -90,9 +126,32 @@ async function send() {
     <NavBar />
 
     <main class="chat-container">
-      <div class="chat-box">
+      <aside class="session-pane">
+        <div class="session-head">消息会话</div>
+        <div v-if="!sessions.length" class="session-empty">暂无会话</div>
+        <div
+          v-for="s in sessions"
+          :key="s.userId"
+          :class="['session-item', { active: String(s.userId) === String(peerId) }]"
+          @click="openSession(s.userId)"
+        >
+          <div class="session-avatar">💬</div>
+          <div class="session-body">
+            <div class="session-top">
+              <span class="session-name">{{ s.nickName }}</span>
+              <span class="session-time">{{ formatTime(s.lastTime) }}</span>
+            </div>
+            <div class="session-bottom">
+              <span class="session-last">{{ s.mineLast ? '我：' : '' }}{{ s.lastMessage || '图片消息' }}</span>
+              <span v-if="s.unreadCount > 0" class="session-badge">{{ s.unreadCount }}</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <section v-if="peerId" class="chat-box">
         <div class="chat-header">
-          <span>{{ titleText }}（用户 #{{ peerId || 1 }}）</span>
+          <span>{{ titleText }}（用户 #{{ peerId }}）</span>
           <span class="ws-status">
             <span :class="['ws-dot', online ? 'on' : 'off']"></span>
             {{ online ? '在线' : '重连中' }}
@@ -113,7 +172,11 @@ async function send() {
           <input v-model="input" placeholder="输入消息..." :disabled="sending" @keyup.enter="send" />
           <button class="send-btn" :disabled="sending" @click="send">{{ sending ? '发送中…' : '发送' }}</button>
         </div>
-      </div>
+      </section>
+
+      <section v-else class="chat-box empty-box">
+        <div class="pick-empty">从左侧选择一个会话开始聊天</div>
+      </section>
     </main>
   </div>
 </template>
@@ -129,8 +192,23 @@ async function send() {
 .nav-actions { display: flex; align-items: center; gap: 12px; }
 .publish-btn { background: #0f172a; color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 13px; text-decoration: none; }
 
-.chat-container { max-width: 700px; margin: 24px auto; padding: 0 16px; }
-.chat-box { border: 1px solid #f0f0f0; border-radius: 16px; overflow: hidden; background: #fff; }
+.chat-container { max-width: 960px; margin: 24px auto; padding: 0 16px; display: flex; gap: 16px; align-items: stretch; }
+.session-pane { width: 280px; flex-shrink: 0; background: #fff; border: 1px solid #f0f0f0; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; }
+.session-head { padding: 14px 18px; font-weight: 600; border-bottom: 1px solid #f0f0f0; }
+.session-empty { padding: 40px 16px; text-align: center; color: #94a3b8; font-size: 13px; }
+.session-item { display: flex; gap: 10px; padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f5f5f5; }
+.session-item.active { background: #eff6ff; }
+.session-avatar { width: 40px; height: 40px; border-radius: 12px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.session-body { flex: 1; min-width: 0; }
+.session-top { display: flex; justify-content: space-between; align-items: center; }
+.session-name { font-size: 14px; font-weight: 600; color: #0f172a; }
+.session-time { font-size: 11px; color: #94a3b8; }
+.session-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+.session-last { font-size: 12px; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px; }
+.session-badge { min-width: 18px; height: 18px; border-radius: 9px; background: #ef4444; color: #fff; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; padding: 0 5px; }
+.chat-box { flex: 1; min-width: 0; border: 1px solid #f0f0f0; border-radius: 16px; overflow: hidden; background: #fff; }
+.empty-box { display: flex; align-items: center; justify-content: center; min-height: 320px; }
+.pick-empty { color: #94a3b8; font-size: 14px; }
 .chat-header { padding: 16px 20px; background: #f8fafc; font-weight: 600; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
 .ws-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 400; color: #64748b; }
 .ws-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }

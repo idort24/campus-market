@@ -84,15 +84,26 @@ export async function getMySell(params = {}) {
   return list.map(normalizeOrder)
 }
 
-/** 确认收货 */
+/** 卖家确认订单（待付款 → 待交易） */
 export async function confirmOrder(id) {
+  if (USE_MOCK) {
+    await delay(100)
+    const o = mockOrders.find((x) => String(x.id) === String(id))
+    if (o) o.status = 'WAIT_TRADE'
+    return o ?? null
+  }
+  return http.put(`/order/confirm/${id}`)
+}
+
+/** 买家确认收货（待交易 → 已完成） */
+export async function finishOrder(id) {
   if (USE_MOCK) {
     await delay(100)
     const o = mockOrders.find((x) => String(x.id) === String(id))
     if (o) o.status = 'FINISH'
     return o ?? null
   }
-  return http.put(`/order/confirm/${id}`)
+  return http.put(`/order/finish/${id}`)
 }
 
 /** 取消订单 */

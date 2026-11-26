@@ -105,3 +105,32 @@ export function loginBySms({ phone, smsCode }) {
   if (USE_MOCK) return authMock.login(payload)
   return http.post('/user/login', payload)
 }
+
+/**
+ * 6. 发送邮箱验证码
+ * ------------------------------------------------------------
+ * 后端：POST /api/v1/auth/email/code  body { email }
+ * 返回 { captchaKey, expireIn, devCode? }（devCode 仅联调/演示开关打开时回传）
+ */
+export function sendEmailCode(email) {
+  if (USE_MOCK) return authMock.sendEmailCode(email)
+  return http.post('/auth/email/code', { email })
+}
+
+/**
+ * 7. 邮箱验证码登录（登录的邮箱分支）
+ * ------------------------------------------------------------
+ * 仍走 POST /user/login，captchaKey 传 `email:{邮箱}`，后端按邮箱查账号、校验邮件码；
+ * 邮箱分支不校验密码。
+ * @param {{email:string, emailCode:string}} payload
+ */
+export function loginByEmail({ email, emailCode }) {
+  const payload = {
+    username: email,
+    password: '',
+    captchaKey: `email:${email}`,
+    captchaCode: emailCode,
+  }
+  if (USE_MOCK) return authMock.login(payload)
+  return http.post('/user/login', payload)
+}

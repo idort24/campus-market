@@ -8,9 +8,10 @@
 //   2. 「管理后台」—— 仅当后端 /user/menus 下发了 /admin，或账号具备管理权限时才出现
 // 也就是说：普通学生登录看不到「管理后台」，管理员登录才多出这一项。
 // ============================================================
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { getUserPerms, isAdmin } from '../utils/auth.js'
+import { getSessions } from '../api/chat.js'
 
 defineProps({
   // 隐藏右上角「＋发布」按钮（发布页自身可传 false）
@@ -72,12 +73,38 @@ function loadMenus() {
 
 const menuList = ref(baseMenus)
 
-onMounted(loadMenus)
+// 未读消息总数（角标）
+const unreadTotal = ref(0)
+let unreadTimer = null
+
+async function loadUnread() {
+  token.value = localStorage.getItem('token')
+  if (!token.value) {
+    unreadTotal.value = 0
+    return
+  }
+  try {
+    const list = await getSessions()
+    unreadTotal.value = list.reduce((sum, s) => sum + (Number(s.unreadCount) || 0), 0)
+  } catch {
+    // 角标失败静默，不影响导航
+  }
+}
+
+onMounted(() => {
+  loadMenus()
+  loadUnread()
+  unreadTimer = setInterval(loadUnread, 30000)
+})
+
+onUnmounted(() => {
+  if (unreadTimer) clearInterval(unreadTimer)
+})
 
 // 路由变化时刷新登录态（登录/退出后导航要立刻变）
 watch(
   () => router.currentRoute.value.fullPath,
-  () => loadMenus()
+  () => { loadMenus(); loadUnread() }
 )
 
 function goLogin() {
@@ -101,6 +128,10 @@ function goLogin() {
           active-class="active"
         >
           {{ m.title }}
+        </router-link>
+        <router-link v-if="isLoggedIn" to="/chat" class="chat-link">
+          消息
+          <span v-if="unreadTotal > 0" class="nav-badge">{{ unreadTotal > 99 ? '99+' : unreadTotal }}</span>
         </router-link>
       </nav>
 
@@ -138,6 +169,9 @@ function goLogin() {
 .nav-links a:hover, .nav-links a.active { color: #0f172a; font-weight: 600; }
 
 .nav-actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.chat-link { position: relative; color: #64748b; font-size: 14px; text-decoration: none; white-space: nowrap; }
+.chat-link:hover { color: #0f172a; font-weight: 600; }
+.nav-badge { position: absolute; top: -7px; right: -14px; min-width: 16px; height: 16px; border-radius: 8px; background: #ef4444; color: #fff; font-size: 10px; display: inline-flex; align-items: center; justify-content: center; padding: 0 4px; }
 .publish-btn { background: #0f172a; color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 13px; text-decoration: none; }
 .publish-btn:hover { background: #1e293b; }
 

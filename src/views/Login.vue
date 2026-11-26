@@ -5,10 +5,10 @@
 // 三种形态：密码登录（主）、短信登录、扫码登录（占位）
 // 密码登录含图形验证码，错误后自动刷新验证码
 // ============================================================
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { login, loginBySms, sendSmsCode } from '../api/auth.js'
+import { login, loginBySms, loginByEmail, sendSmsCode, sendEmailCode } from '../api/auth.js'
 import { saveAuth, loadAndCacheMenus, isLoggedIn } from '../utils/auth.js'
 import CaptchaBox from '../components/CaptchaBox.vue'
 
@@ -34,14 +34,25 @@ const smsForm = ref({ phone: '', code: '' })
 const smsCountdown = ref(0)
 const smsTimer = ref(null)
 
-function startCountdown() {
-  smsCountdown.value = 60
-  clearInterval(smsTimer.value)
-  smsTimer.value = setInterval(() => {
-    smsCountdown.value -= 1
-    if (smsCountdown.value <= 0) clearInterval(smsTimer.value)
+// ---- 邮箱登录表单 ----
+const emailForm = ref({ email: '', code: '' })
+const emailCountdown = ref(0)
+const emailTimer = ref(null)
+
+function startCountdown(target, timer) {
+  target.value = 60
+  clearInterval(timer.value)
+  timer.value = setInterval(() => {
+    target.value -= 1
+    if (target.value <= 0) clearInterval(timer.value)
   }, 1000)
 }
+
+function stopTimers() {
+  clearInterval(smsTimer.value)
+  clearInterval(emailTimer.value)
+}
+onUnmounted(stopTimers)
 
 async function sendCode() {
   if (smsCountdown.value > 0) return
@@ -51,13 +62,33 @@ async function sendCode() {
   }
   try {
     const res = await sendSmsCode(smsForm.value.phone)
-    startCountdown()
+    startCountdown(smsCountdown, smsTimer)
     // 真后端字段是 devCode，Mock 是 debugCode，两个都兼容
     const dev = res?.devCode ?? res?.debugCode
     if (dev) {
       ElMessage.success(`验证码已发送（开发环境验证码：${dev}）`)
     } else {
       ElMessage.success('验证码已发送')
+    }
+  } catch (e) {
+    ElMessage.error(e.message || '发送失败')
+  }
+}
+
+async function sendMailCode() {
+  if (emailCountdown.value > 0) return
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailForm.value.email.trim())) {
+    ElMessage.warning('请输入正确的邮箱地址')
+    return
+  }
+  try {
+    const res = await sendEmailCode(emailForm.value.email.trim())
+    startCountdown(emailCountdown, emailTimer)
+    const dev = res?.devCode ?? res?.debugCode
+    if (dev) {
+      ElMessage.success(`验证码已发送（开发环境验证码：${dev}）`)
+    } else {
+      ElMessage.success('验证码已发送至邮箱')
     }
   } catch (e) {
     ElMessage.error(e.message || '发送失败')
@@ -121,9 +152,32 @@ async function submitSms() {
   }
 }
 
+async function submitEmail() {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailForm.value.email.trim())) {
+    ElMessage.warning('请输入正确的邮箱地址')
+    return
+  }
+  if (!emailForm.value.code.trim()) { ElMessage.warning('请输入邮箱验证码'); return }
+
+  loading.value = true
+  try {
+    // 邮箱分支：captchaKey 传 email:{邮箱}，后端按邮箱查账号、校验邮件码
+    const res = await loginByEmail({
+      email: emailForm.value.email.trim(),
+      emailCode: emailForm.value.code.trim(),
+    })
+    await afterLogin(res)
+  } catch (e) {
+    ElMessage.error(e.message || '登录失败')
+  } finally {
+    loading.value = false
+  }
+}
+
 const switchTabs = [
   { key: 'password', label: '密码登录' },
   { key: 'sms', label: '短信登录' },
+  { key: 'email', label: '邮箱登录' },
   { key: 'qr', label: '扫码登录' },
 ]
 
@@ -137,6 +191,7 @@ function switchMode(t) {
 
 const titleText = computed(() => {
   if (mode.value === 'sms') return '手机号快捷登录'
+  if (mode.value === 'email') return '邮箱快捷登录'
   if (mode.value === 'qr') return '扫码登录'
   return '欢迎回来'
 })
@@ -243,6 +298,30 @@ const titleText = computed(() => {
           </button>
 
           <p class="bottom-tip">演示手机号：13800000002（学生）/ 13800000008（管理员）/ 开发期验证码会直接提示在页面上</p>
+        </form>
+
+        <!-- ========== 邮箱登录 ========== -->
+        <form v-else-if="mode === 'email'" class="form-body" @submit.prevent="submitEmail">
+          <label class="field">
+            <span class="label-text">邮箱</span>
+            <input v-model="emailForm.email" placeholder="请输入注册邮箱" maxlength="64" />
+          </label>
+
+          <div class="field">
+            <span class="label-text">邮箱验证码</span>
+            <div class="sms-row">
+              <input v-model="emailForm.code" class="sms-input" placeholder="6 位验证码" maxlength="6" />
+              <button class="sms-btn" type="button" :disabled="emailCountdown > 0" @click="sendMailCode">
+                {{ emailCountdown > 0 ? `${emailCountdown}s` : '获取验证码' }}
+              </button>
+            </div>
+          </div>
+
+          <button class="primary-btn" type="submit" :disabled="loading">
+            {{ loading ? '登录中…' : '登 录' }}
+          </button>
+
+          <p class="bottom-tip">演示邮箱：admin@campus.edu（管理员）/ 2024777777@campus.edu（学生）；未配置 SMTP 时验证码见后端控制台</p>
         </form>
 
         <!-- ========== 扫码登录（占位） ========== -->

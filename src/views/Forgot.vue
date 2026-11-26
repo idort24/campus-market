@@ -50,7 +50,7 @@ async function sendCode() {
 async function submit() {
   if (!/^1[3-9]\d{9}$/.test(form.value.phone)) { ElMessage.warning('请输入正确的手机号'); return }
   if (!form.value.code.trim()) { ElMessage.warning('请输入短信验证码'); return }
-  if (!form.value.newPassword || form.value.newPassword.length < 6) { ElMessage.warning('新密码至少 6 位'); return }
+  if (!/^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(form.value.newPassword || '')) { ElMessage.warning('新密码需 8 位以上，且同时包含字母和数字'); return }
   if (form.value.newPassword !== form.value.confirmPassword) { ElMessage.warning('两次输入的密码不一致'); return }
 
   loading.value = true
@@ -108,7 +108,7 @@ async function submit() {
 
         <label class="field">
           <span class="label-text">新密码</span>
-          <input v-model="form.newPassword" type="password" placeholder="至少 6 位" autocomplete="new-password" />
+          <input v-model="form.newPassword" type="password" placeholder="8 位以上，含字母和数字" autocomplete="new-password" />
         </label>
 
         <label class="field">

@@ -47,6 +47,33 @@ export function normalizeMessage(m = {}) {
   }
 }
 
+/** 会话归一化：userId / nickName / lastMessage / lastTime / unreadCount / mineLast */
+export function normalizeSession(s = {}) {
+  return {
+    ...s,
+    userId: s.userId ?? s.peerId ?? null,
+    nickName: s.nickName ?? s.nick_name ?? '同学',
+    lastMessage: s.lastMessage ?? s.content ?? '',
+    msgImage: s.msgImage ?? '',
+    lastTime: s.lastTime ?? '',
+    mineLast: !!s.mineLast,
+    unreadCount: Number(s.unreadCount ?? s.unread ?? 0),
+  }
+}
+
+/** 拉取我的会话列表（含未读数） */
+export async function getSessions() {
+  if (USE_MOCK) {
+    await delay(120)
+    return [
+      normalizeSession({ userId: 2, nickName: '张爱阳', lastMessage: '在的，九成新，可以图书馆门口交易', lastTime: '2024-01-15 14:25', unreadCount: 1, mineLast: false }),
+    ]
+  }
+  const res = await http.get('/chat/sessions')
+  const list = Array.isArray(res) ? res : (res?.records || [])
+  return list.map(normalizeSession)
+}
+
 /** 拉取与某人的会话历史（userId = 对方 id） */
 export async function getMessages(userId, params = {}) {
   if (USE_MOCK) {

@@ -5,15 +5,26 @@
 // 退出登录：先调 POST /auth/logout（后端写 Redis 黑名单），成功后再清本地
 // 管理后台入口：按后端菜单 / 权限判断，普通学生看不到
 // ============================================================
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { logout as apiLogout } from '../api/auth.js'
+import { getMyEvaluations } from '../api/evaluation.js'
 import { clearAuth, getUserInfo, isAdmin, isLoggedIn } from '../utils/auth.js'
 import NavBar from '../components/NavBar.vue'
 
 const router = useRouter()
 const loggingOut = ref(false)
+const myReviews = ref([])
+
+onMounted(async () => {
+  if (!isLoggedIn()) return
+  try {
+    myReviews.value = await getMyEvaluations()
+  } catch {
+    myReviews.value = []
+  }
+})
 
 const userInfo = computed(() => getUserInfo())
 const loggedIn = computed(() => isLoggedIn())
@@ -104,6 +115,19 @@ const myItems = [
         </div>
       </div>
 
+      <!-- 我的评价 -->
+      <div v-if="loggedIn" class="section-head"><h3>我的评价（{{ myReviews.length }}）</h3></div>
+      <div v-if="loggedIn" class="review-list">
+        <div v-if="!myReviews.length" class="review-empty">还没有给出过评价</div>
+        <div v-for="r in myReviews" :key="r.id" class="review-card">
+          <div class="review-top">
+            <span class="review-stars">{{ '★'.repeat(r.score) }}{{ '☆'.repeat(5 - r.score) }}</span>
+            <span class="review-time">{{ r.createTime }}</span>
+          </div>
+          <p class="review-content">{{ r.content }}</p>
+        </div>
+      </div>
+
       <!-- 管理员入口（仅管理员可见） -->
       <div v-if="adminFlag" class="admin-banner" @click="router.push('/admin')">
         <span>🔐</span>
@@ -165,9 +189,17 @@ const myItems = [
 .grid-title { font-size: 14px; font-weight: 600; color: #1e293b; }
 .grid-desc { font-size: 12px; color: #94a3b8; margin-top: 2px; }
 
+/* 我的评价 */
+.review-list { display: flex; flex-direction: column; gap: 12px; }
+.review-empty { color: #94a3b8; font-size: 13px; padding: 12px 0; }
+.review-card { background: #fff; border: 1px solid #f0f0f0; border-radius: 14px; padding: 14px 16px; }
+.review-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.review-stars { color: #f59e0b; font-size: 13px; letter-spacing: 2px; }
+.review-time { font-size: 11px; color: #94a3b8; }
+.review-content { margin: 0; font-size: 13px; color: #475569; overflow-wrap: anywhere; }
+
 /* 管理员入口 */
-.admin-banner {
-  margin-top: 20px; background: #fffbeb; border: 1px solid #fde68a;
+.admin-banner {  margin-top: 20px; background: #fffbeb; border: 1px solid #fde68a;
   border-radius: 14px; padding: 18px 20px; display: flex; align-items: center; gap: 14px; cursor: pointer;
 }
 .admin-banner > span:first-child { font-size: 28px; }

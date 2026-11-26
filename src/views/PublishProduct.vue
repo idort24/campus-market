@@ -2,7 +2,9 @@
 import NavBar from '../components/NavBar.vue'
 import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { createProduct } from '../api/product.js'
+import { batchUpload } from '../api/file.js'
 import { USE_MOCK } from '../api/config.js'
 import { CATEGORIES, CONDITIONS } from '../data/products.js'
 
@@ -19,6 +21,38 @@ const form = reactive({
   description: '',
   location: ''
 })
+
+// 已上传图片地址（后端 images JSON 数组）
+const images = ref([])
+const uploading = ref(false)
+const fileInput = ref(null)
+
+function onPickFiles(e) {
+  const files = Array.from(e.target.files || [])
+  if (!files.length) return
+  uploadImages(files)
+}
+
+async function uploadImages(files) {
+  uploading.value = true
+  try {
+    const res = await batchUpload(files)
+    const urls = (res || [])
+      .filter((it) => it.success && it.downloadUrl)
+      .map((it) => it.downloadUrl)
+    images.value.push(...urls)
+    if (urls.length < files.length) ElMessage.warning('部分图片上传失败，请重试')
+  } catch (e) {
+    ElMessage.error(e?.message || '图片上传失败')
+  } finally {
+    uploading.value = false
+    if (fileInput.value) fileInput.value.value = ''
+  }
+}
+
+function removeImage(index) {
+  images.value.splice(index, 1)
+}
 
 // 校验错误信息（字段名 -> 提示文案）
 const errors = reactive({})
@@ -59,7 +93,7 @@ async function onSubmit() {
 
   submitting.value = true
   try {
-    await createProduct({ ...form })
+    await createProduct({ ...form, images: images.value })
     // 发布成功，跳回商品市场
     router.push('/product')
   } catch (e) {
@@ -97,6 +131,22 @@ function onCancel() {
             :class="{ invalid: errors.name }"
           />
           <p v-if="errors.name" class="error-msg">{{ errors.name }}</p>
+        </div>
+
+        <!-- 商品图片 -->
+        <div class="form-item">
+          <label>商品图片</label>
+          <div class="img-picker">
+            <div v-for="(url, i) in images" :key="url" class="img-thumb">
+              <img :src="url" alt="商品图片" />
+              <button type="button" class="img-del" @click="removeImage(i)">×</button>
+            </div>
+            <label v-if="images.length < 6" class="img-add">
+              <input ref="fileInput" type="file" accept="image/*" multiple hidden @change="onPickFiles" />
+              <span>{{ uploading ? '上传中…' : '+ 上传图片' }}</span>
+            </label>
+          </div>
+          <p class="img-tip">最多 6 张，支持 JPG/PNG；不上传则用分类图标占位</p>
         </div>
 
         <!-- 价格 + 分类 -->
@@ -267,6 +317,14 @@ textarea { resize: vertical; }
   color: #ff6b6b;
   font-size: 12px;
 }
+
+.img-picker { display: flex; flex-wrap: wrap; gap: 10px; }
+.img-thumb { position: relative; width: 84px; height: 84px; border-radius: 10px; overflow: hidden; border: 1px solid #e3e3ec; }
+.img-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.img-del { position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; border: none; border-radius: 50%; background: rgba(15,23,42,0.65); color: #fff; font-size: 13px; line-height: 20px; cursor: pointer; }
+.img-add { width: 84px; height: 84px; border: 1.5px dashed #cbd5e1; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #64748b; font-size: 13px; }
+.img-add:hover { border-color: #c2410c; color: #c2410c; }
+.img-tip { margin: 6px 0 0; color: #999; font-size: 12px; }
 
 .submit-error {
   margin: 0 0 15px;

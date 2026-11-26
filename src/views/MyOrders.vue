@@ -1,14 +1,17 @@
 <script setup>
 import NavBar from '../components/NavBar.vue'
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getMyBuy, confirmOrder, cancelOrder } from '../api/order.js'
+import { getMyBuy, getMySell, confirmOrder, finishOrder, cancelOrder } from '../api/order.js'
+import { addEvaluation, getMyEvaluations } from '../api/evaluation.js'
 
 const router = useRouter()
 const userInfo = computed(() => { try { return JSON.parse(localStorage.getItem('userInfo') || '{}') } catch { return {} } })
 const isAdmin = computed(() => userInfo.value?.roleCode === 'ADMIN')
+const currentUserId = computed(() => userInfo.value?.id ?? null)
 
+const tab = ref('buy') // buy=我买的 sell=我卖的
 const orders = ref([])
 const loading = ref(false)
 
@@ -24,11 +27,33 @@ function statusStyle(s) {
   return statusMap[s] || { label: s || '未知', color: '#64748b', bg: '#f1f5f9' }
 }
 
+function isBuyer(order) {
+  return String(order.buyerId) === String(currentUserId.value)
+}
+
+// 对方昵称：我买的看卖家，我卖的看买家
+function peerName(order) {
+  return isBuyer(order) ? (order.seller || '卖家') : (order.buyer || '买家')
+}
+
+// 取订单对方：我买的联系卖家，我卖的联系买家
+function contactUserId(order) {
+  const me = String(currentUserId.value ?? '')
+  if (order.buyerId != null && String(order.buyerId) === me) return order.sellerId
+  if (order.sellerId != null && String(order.sellerId) === me) return order.buyerId
+  return order.sellerId ?? order.buyerId ?? null
+}
+
+function goContact(order) {
+  const to = contactUserId(order)
+  if (to != null) router.push(`/chat/${to}`)
+}
+
 async function load() {
   loading.value = true
   try {
-    // 后端：GET /api/v1/order/myBuy（我买的订单）
-    orders.value = await getMyBuy()
+    orders.value = tab.value === 'buy' ? await getMyBuy() : await getMySell()
+    await loadRated()
   } catch (e) {
     ElMessage.error(e.message || '加载订单失败')
   } finally {
@@ -36,9 +61,10 @@ async function load() {
   }
 }
 onMounted(load)
+watch(tab, load)
 
-/** 后端没有 pay 接口，待付款订单只能取消（PUT /order/cancel/{id}） */
-async function pay(order) {
+/** 待付款订单只能取消（PUT /order/cancel/{id}） */
+async function cancel(order) {
   try {
     await cancelOrder(order.id)
     order.status = 'CANCEL'
@@ -48,15 +74,79 @@ async function pay(order) {
   }
 }
 
-/** 确认收货：PUT /api/v1/order/confirm/{id} */
-async function confirmDone(order) {
+/** 卖家确认订单：待付款 → 待交易（PUT /order/confirm/{id}） */
+async function confirm(order) {
   try {
     await confirmOrder(order.id)
+    order.status = 'WAIT_TRADE'
+    ElMessage.success('已确认订单')
+  } catch (e) {
+    ElMessage.error(e.message || '确认失败')
+  }
+}
+
+/** 买家确认收货：待交易 → 已完成（PUT /order/finish/{id}） */
+async function finish(order) {
+  try {
+    await finishOrder(order.id)
     order.status = 'FINISH'
     ElMessage.success('确认交易完成')
   } catch (e) {
     ElMessage.error(e.message || '确认失败')
   }
+}
+
+/** 评价弹窗 */
+const rateDialog = ref(false)
+const rateTarget = ref(null)
+const rateScore = ref(5)
+const rateContent = ref('')
+const ratedOrderIds = ref(new Set())
+const submittingRate = ref(false)
+
+async function loadRated() {
+  try {
+    const list = await getMyEvaluations()
+    ratedOrderIds.value = new Set(list.map((e) => String(e.orderId)))
+  } catch {
+    // 已评价标记拉取失败不影响下单流程
+  }
+}
+
+function goRate(order) {
+  rateTarget.value = order
+  rateScore.value = 5
+  rateContent.value = ''
+  rateDialog.value = true
+}
+
+async function submitRate() {
+  const order = rateTarget.value
+  const content = rateContent.value.trim()
+  if (!content) {
+    ElMessage.warning('请填写评价内容')
+    return
+  }
+  submittingRate.value = true
+  try {
+    await addEvaluation({
+      orderId: order.id,
+      toUserId: order.sellerId,
+      score: rateScore.value,
+      evalContent: content,
+    })
+    ratedOrderIds.value.add(String(order.id))
+    ElMessage.success('评价成功')
+    rateDialog.value = false
+  } catch (e) {
+    ElMessage.error(e.message || '评价提交失败')
+  } finally {
+    submittingRate.value = false
+  }
+}
+
+function isRated(order) {
+  return ratedOrderIds.value.has(String(order.id))
 }
 </script>
 
@@ -66,7 +156,10 @@ async function confirmDone(order) {
 
     <main class="container">
       <div class="page-head">
-        <h2>我的订单</h2>
+        <div class="tabs">
+          <button :class="['tab', { active: tab === 'buy' }]" @click="tab = 'buy'">我买的</button>
+          <button :class="['tab', { active: tab === 'sell' }]" @click="tab = 'sell'">我卖的</button>
+        </div>
         <span class="count">共 {{ orders.length }} 笔订单</span>
       </div>
 
@@ -80,21 +173,57 @@ async function confirmDone(order) {
           </div>
           <div class="order-body">
             <div class="order-goods">
-              <div class="goods-icon">📦</div>
+              <div class="goods-icon">
+                <img v-if="order.cover" :src="order.cover" alt="商品图片" />
+                <template v-else>📦</template>
+              </div>
               <div>
                 <h4>{{ order.goods }}</h4>
-                <p>卖家：{{ order.seller }}</p>
+                <p>{{ isBuyer(order) ? '卖家' : '买家' }}：{{ peerName(order) }}</p>
                 <p class="time">{{ order.time }}</p>
               </div>
             </div>
             <div class="order-right">
-              <span class="price">¥{{ order.price.toFixed(2) }}</span>
+              <span class="price">¥{{ order.price ? Number(order.price).toFixed(2) : '--' }}</span>
               <div class="order-actions">
-                <button v-if="order.status === 'WAIT_CONFIRM'" class="pay-btn" @click="pay(order)">取消订单</button>
-                <button v-if="order.status === 'WAIT_TRADE'" class="confirm-btn" @click="confirmDone(order)">确认收货</button>
-                <button class="chat-btn" @click="router.push('/chat/1')">联系卖家</button>
+                <template v-if="isBuyer(order)">
+                  <button v-if="order.status === 'WAIT_CONFIRM'" class="pay-btn" @click="cancel(order)">取消订单</button>
+                  <button v-if="order.status === 'WAIT_TRADE'" class="confirm-btn" @click="finish(order)">确认收货</button>
+                </template>
+                <template v-else>
+                  <button v-if="order.status === 'WAIT_CONFIRM'" class="confirm-btn" @click="confirm(order)">确认订单</button>
+                </template>
+                <button v-if="order.status === 'FINISH' && !isRated(order)" class="rate-btn" @click="goRate(order)">去评价</button>
+                <span v-else-if="order.status === 'FINISH' && isRated(order)" class="rated-tag">已评价</span>
+                <button v-if="contactUserId(order)" class="chat-btn" @click="goContact(order)">
+                  {{ isBuyer(order) ? '联系卖家' : '联系买家' }}
+                </button>
               </div>
             </div>
+          </div>
+        </div>
+        <div v-if="!loading && !orders.length" class="order-empty">暂无订单</div>
+      </div>
+
+      <!-- 评价弹窗 -->
+      <div v-if="rateDialog" class="rate-mask" @click.self="rateDialog = false">
+        <div class="rate-box">
+          <h3>评价交易</h3>
+          <p class="rate-goods">{{ rateTarget?.goods }}</p>
+          <div class="rate-stars">
+            <button
+              v-for="n in 5"
+              :key="n"
+              :class="['star', { on: n <= rateScore }]"
+              @click="rateScore = n"
+            >★</button>
+          </div>
+          <textarea v-model="rateContent" rows="4" maxlength="500" placeholder="说说这次交易体验…"></textarea>
+          <div class="rate-actions">
+            <button class="chat-btn" @click="rateDialog = false">取消</button>
+            <button class="confirm-btn" :disabled="submittingRate" @click="submitRate">
+              {{ submittingRate ? '提交中…' : '提交评价' }}
+            </button>
           </div>
         </div>
       </div>
@@ -135,5 +264,24 @@ async function confirmDone(order) {
 .order-actions button { padding: 6px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; border: none; }
 .pay-btn { background: #2563eb; color: #fff; }
 .confirm-btn { background: #16a34a; color: #fff; }
+.rate-btn { background: #f59e0b; color: #fff; }
 .chat-btn { background: #f1f5f9; color: #475569; }
+
+.tabs { display: flex; gap: 8px; }
+.tab { border: 1px solid #e2e8f0; background: #fff; color: #64748b; padding: 6px 16px; border-radius: 16px; font-size: 13px; cursor: pointer; }
+.tab.active { background: #0f172a; color: #fff; border-color: #0f172a; }
+.goods-icon img { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
+.order-empty { text-align: center; color: #94a3b8; font-size: 13px; padding: 40px 0; }
+.rated-tag { font-size: 12px; color: #16a34a; background: #dcfce7; padding: 6px 12px; border-radius: 8px; }
+
+.rate-mask { position: fixed; inset: 0; background: rgba(15,23,42,0.45); display: flex; align-items: center; justify-content: center; z-index: 200; }
+.rate-box { width: 420px; max-width: 92vw; background: #fff; border-radius: 16px; padding: 24px; }
+.rate-box h3 { margin: 0 0 8px; font-size: 17px; }
+.rate-goods { margin: 0 0 14px; color: #64748b; font-size: 13px; }
+.rate-stars { display: flex; gap: 6px; margin-bottom: 14px; }
+.star { border: none; background: none; font-size: 26px; color: #cbd5e1; cursor: pointer; padding: 0; }
+.star.on { color: #f59e0b; }
+.rate-box textarea { width: 100%; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; resize: none; outline: none; font-size: 14px; }
+.rate-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+.rate-actions button { padding: 8px 18px; border-radius: 10px; font-size: 13px; border: none; cursor: pointer; }
 </style>

@@ -41,6 +41,7 @@ const BUILTIN_USERS = [
     id: 1,
     studentNo: '2024110640',
     phone: '13800000008',
+    email: 'admin@campus.edu',
     nickName: '管理员',
     password: '123456',
     roleCode: 'ADMIN',
@@ -51,6 +52,7 @@ const BUILTIN_USERS = [
     id: 2,
     studentNo: '2024777777',
     phone: '13900000000',
+    email: '2024777777@campus.edu',
     nickName: '张爱阳',
     password: '123456',
     roleCode: 'STUDENT',
@@ -64,6 +66,7 @@ const LS_USERS = 'cm_mock_users'
 const LS_CAPTCHA = 'cm_mock_captcha'
 const LS_TOKEN_USER = 'cm_mock_token_user'
 const LS_SMS = 'cm_mock_sms'
+const LS_EMAIL = 'cm_mock_email'
 
 function readJSON(key, fallback) {
   try {
@@ -89,6 +92,7 @@ function toPublicUser(u) {
     id: u.id,
     studentNo: u.studentNo,
     phone: u.phone,
+    email: u.email,
     nickName: u.nickName,
     roleCode: u.roleCode,
     roleName: u.roleName,
@@ -180,10 +184,11 @@ export const authMock = {
   // 两个分支：
   //   图形码分支：captchaKey 是 getCaptcha() 返回的 key，校验 4 位图形码
   //   短信分支  ：captchaKey 形如 sms:13800000000（马智贤后端口径），校验 6 位短信码，不校验密码
-  async login({ username, password, captchaKey, captchaCode, smsCode } = {}) {
+  async login({ username, password, captchaKey, captchaCode, smsCode, emailCode } = {}) {
     await delay(400)
 
     const isSms = typeof captchaKey === 'string' && captchaKey.startsWith('sms:')
+    const isEmail = typeof captchaKey === 'string' && captchaKey.startsWith('email:')
     if (isSms) {
       const phone = captchaKey.slice(4)
       const code = String(smsCode ?? captchaCode ?? '').trim()
@@ -192,20 +197,29 @@ export const authMock = {
       if (Date.now() > saved.expireAt) throw new Error('短信验证码已过期，请重新获取')
       if (saved.code !== code) throw new Error('短信验证码错误')
       localStorage.removeItem(LS_SMS) // 一次性，避免复用
+    } else if (isEmail) {
+      const email = captchaKey.slice(6)
+      const code = String(emailCode ?? captchaCode ?? '').trim()
+      const saved = readJSON(LS_EMAIL, null)
+      if (!saved || saved.email !== email) throw new Error('请先获取邮箱验证码')
+      if (Date.now() > saved.expireAt) throw new Error('邮箱验证码已过期，请重新获取')
+      if (saved.code !== code) throw new Error('邮箱验证码错误')
+      localStorage.removeItem(LS_EMAIL)
     } else {
       const capErr = this.verifyCaptcha(captchaKey, captchaCode)
       if (capErr) throw new Error(capErr)
     }
 
     const account = String(username || '').trim()
-    if (!account) throw new Error('请输入学号或手机号')
-    if (!isSms && !password) throw new Error('请输入密码')
+    if (!account) throw new Error('请输入邮箱')
+    if (!isSms && !isEmail && !password) throw new Error('请输入密码')
 
-    const user = getAllUsers().find(
-      (u) => u.studentNo === account || u.phone === account
-    )
+    const user = getAllUsers().find((u) => {
+      if (isEmail) return u.email === account
+      return u.studentNo === account || u.phone === account
+    })
     if (!user) throw new Error('账号不存在，请先注册')
-    if (!isSms && user.password !== password) throw new Error('密码错误')
+    if (!isSms && !isEmail && user.password !== password) throw new Error('密码错误')
 
     const token = `mock.${window.btoa(unescape(encodeURIComponent(user.studentNo)))}.${Date.now()}`
     const roles = [user.roleCode]
@@ -221,24 +235,28 @@ export const authMock = {
   },
 
   // 注册
-  async register({ studentNo, phone, password } = {}) {
+  async register({ studentNo, phone, email, password } = {}) {
     await delay(400)
 
     const no = String(studentNo || '').trim()
     const ph = String(phone || '').trim()
+    const em = String(email || '').trim().toLowerCase()
 
     if (!/^\d{8,12}$/.test(no)) throw new Error('学号格式不正确（8-12 位数字）')
     if (!/^1[3-9]\d{9}$/.test(ph)) throw new Error('手机号格式不正确')
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) throw new Error('邮箱格式不正确')
     if (!password || String(password).length < 6) throw new Error('密码至少 6 位')
 
     const users = getAllUsers()
     if (users.some((u) => u.studentNo === no)) throw new Error('该学号已注册')
     if (users.some((u) => u.phone === ph)) throw new Error('该手机号已注册')
+    if (users.some((u) => (u.email || '').toLowerCase() === em)) throw new Error('该邮箱已注册')
 
     const newUser = {
       id: Date.now(),
       studentNo: no,
       phone: ph,
+      email: em,
       nickName: `同学${no.slice(-4)}`,
       password: String(password),
       roleCode: 'STUDENT', // 注册默认绑 STUDENT，与后端一致
@@ -273,6 +291,16 @@ export const authMock = {
     writeJSON(LS_SMS, { phone: ph, code, expireAt: Date.now() + 5 * 60000 })
     // 演示方便：把验证码回显出来（真实环境是发短信）
     return { success: true, debugCode: code }
+  },
+
+  // 发送邮箱验证码（邮箱登录）
+  async sendEmailCode(email) {
+    await delay(300)
+    const em = String(email || '').trim()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) throw new Error('邮箱格式不正确')
+    const code = String(Math.floor(100000 + Math.random() * 900000))
+    writeJSON(LS_EMAIL, { email: em, code, expireAt: Date.now() + 5 * 60000 })
+    return { captchaKey: `email:${em}`, expireIn: 300, devCode: code, debugCode: code }
   },
 
   // 忘记密码：校验短信码 → 重置
